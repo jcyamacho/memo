@@ -1,6 +1,9 @@
 package memory
 
-import "context"
+import (
+	"context"
+	"sort"
+)
 
 func (s *Service) List(ctx context.Context, queryWorkspace string) ([]Memory, error) {
 	resolved, err := s.workspaceResolver.Resolve(ctx, queryWorkspace)
@@ -15,6 +18,13 @@ func (s *Service) List(ctx context.Context, queryWorkspace string) ([]Memory, er
 	if err != nil {
 		return nil, err
 	}
+
+	sort.Slice(items, func(i, j int) bool {
+		if items[i].UpdatedAt.Equal(items[j].UpdatedAt) {
+			return items[i].ID < items[j].ID
+		}
+		return items[i].UpdatedAt.After(items[j].UpdatedAt)
+	})
 
 	for i := range items {
 		if items[i].Workspace == resolved {
