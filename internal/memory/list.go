@@ -5,31 +5,31 @@ import (
 	"sort"
 )
 
-func (s *Service) List(ctx context.Context, queryWorkspace string) ([]Memory, error) {
+func (s *Service) List(ctx context.Context, queryWorkspace string) ([]MemoryDTO, error) {
 	resolved, err := s.workspaceResolver.Resolve(ctx, queryWorkspace)
 	if err != nil {
 		return nil, err
 	}
 
-	items, err := s.store.List(ctx, ListFilter{
-		Workspace:      resolved,
-		IncludeGlobals: true,
-	})
+	items, err := s.store.List(ctx, resolved, WithGlobals())
 	if err != nil {
 		return nil, err
 	}
 
 	sort.Slice(items, func(i, j int) bool {
-		if items[i].UpdatedAt.Equal(items[j].UpdatedAt) {
-			return items[i].ID < items[j].ID
+		if items[i].UpdatedAt().Equal(items[j].UpdatedAt()) {
+			return items[i].ID() < items[j].ID()
 		}
-		return items[i].UpdatedAt.After(items[j].UpdatedAt)
+		return items[i].UpdatedAt().After(items[j].UpdatedAt())
 	})
 
+	results := make([]MemoryDTO, 0, len(items))
 	for i := range items {
-		if items[i].Workspace == resolved {
-			items[i].Workspace = queryWorkspace
+		item := items[i].DTO()
+		if item.Workspace == resolved {
+			item.Workspace = queryWorkspace
 		}
+		results = append(results, item)
 	}
-	return items, nil
+	return results, nil
 }

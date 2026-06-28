@@ -1,9 +1,6 @@
 package memory
 
-import (
-	"context"
-	"time"
-)
+import "context"
 
 type EditParams struct {
 	ID            string
@@ -11,30 +8,29 @@ type EditParams struct {
 	PromoteGlobal bool
 }
 
-func (s *Service) Edit(ctx context.Context, params EditParams) (Memory, error) {
+func (s *Service) Edit(ctx context.Context, params EditParams) (MemoryDTO, error) {
 	m, err := s.store.Get(ctx, params.ID)
 	if err != nil {
-		return Memory{}, err
+		return MemoryDTO{}, err
 	}
 
 	changed := false
 	if params.Content != nil {
-		if err := m.SetContent(*params.Content); err != nil {
-			return Memory{}, err
+		contentChanged, err := m.SetContent(*params.Content)
+		if err != nil {
+			return MemoryDTO{}, err
 		}
-		changed = true
+		changed = changed || contentChanged
 	}
 	if params.PromoteGlobal {
-		m.PromoteToGlobal()
-		changed = true
+		changed = m.PromoteToGlobal() || changed
 	}
 	if !changed {
-		return Memory{}, ErrInvalidInput
+		return MemoryDTO{}, ErrInvalidInput
 	}
 
-	m.UpdatedAt = time.Now().UTC()
 	if err := s.store.Update(ctx, m); err != nil {
-		return Memory{}, err
+		return MemoryDTO{}, err
 	}
-	return m, nil
+	return m.DTO(), nil
 }

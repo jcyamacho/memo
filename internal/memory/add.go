@@ -5,26 +5,27 @@ import (
 )
 
 type AddParams struct {
-	Content string
-	Global  bool
+	Content   string
+	Workspace string
+	Global    bool
 }
 
-func (s *Service) Add(ctx context.Context, workspacePath string, params AddParams) (Memory, error) {
-	scope := ""
+func (s *Service) Add(ctx context.Context, params AddParams) (MemoryDTO, error) {
+	resolvedWorkspace := ""
 	if !params.Global {
-		resolved, err := s.workspaceResolver.Resolve(ctx, workspacePath)
+		resolved, err := s.workspaceResolver.Resolve(ctx, params.Workspace)
 		if err != nil {
-			return Memory{}, err
+			return MemoryDTO{}, err
 		}
-		scope = resolved
+		resolvedWorkspace = resolved
 	}
 
-	m, err := New(params.Content, scope)
+	m, err := New(params.Content, resolvedWorkspace)
 	if err != nil {
-		return Memory{}, err
+		return MemoryDTO{}, err
 	}
 	if err := s.store.Insert(ctx, m); err != nil {
-		return Memory{}, err
+		return MemoryDTO{}, err
 	}
-	return m, nil
+	return m.DTO(), nil
 }
