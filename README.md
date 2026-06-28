@@ -8,13 +8,13 @@ for future sessions.
 
 ## Install
 
-Build from the repository:
+Install the latest published version with Go:
 
 ```bash
-go build -o memo .
+go install github.com/jcyamacho/memo@latest
 ```
 
-Then place the binary somewhere on your `PATH`.
+Make sure your Go binary directory is on `PATH` (`$GOBIN` or `$GOPATH/bin`).
 
 ## Storage
 
