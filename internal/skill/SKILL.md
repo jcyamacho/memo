@@ -13,8 +13,9 @@ task log or a copy of the repository.
 | Remember a global memory | `memo add --global <content>` |
 | Remember piped content | `some-command \| memo add [--global]` |
 | Read one memory | `memo get <id>` |
-| Revise content | `memo edit --id <id> --content <content>` |
-| Promote to global | `memo edit --id <id> --global` |
+| Revise content | `memo edit <id> --content <content>` |
+| Revise piped content | `some-command \| memo edit <id>` |
+| Promote to global | `memo edit <id> --global` |
 | Forget memories | `memo delete <id> [id...]` |
 | List known workspaces | `memo workspaces` |
 
@@ -95,7 +96,7 @@ ran the tests, and discussed future improvements.
   environment-specific knowledge.
 - Use `--global` only for preferences or facts that genuinely apply across
   projects.
-- Promote a workspace memory with `memo edit --id <id> --global` only after
+- Promote a workspace memory with `memo edit <id> --global` only after
   confirming it is universal. Prefer promotion over delete-and-add when the same
   memory remains correct and only its scope changes.
 - To replace an incorrectly global memory with a workspace memory, create the
