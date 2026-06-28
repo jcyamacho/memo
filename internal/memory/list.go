@@ -9,8 +9,8 @@ func (s *Service) List(ctx context.Context, queryWorkspace string) ([]Memory, er
 	}
 
 	items, err := s.store.List(ctx, ListFilter{
-		Workspace: resolved,
-		Global:    true,
+		Workspace:      resolved,
+		IncludeGlobals: true,
 	})
 	if err != nil {
 		return nil, err

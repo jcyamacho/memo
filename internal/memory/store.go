@@ -12,6 +12,8 @@ type Store interface {
 }
 
 type ListFilter struct {
+	// Workspace limits the list to one workspace. Empty means all workspaces.
 	Workspace string
-	Global    bool
+
+	IncludeGlobals bool
 }
