@@ -45,6 +45,7 @@ project directory.
 
 | Intent | Command |
 | --- | --- |
+| Print session-start context for agents | `memo context` |
 | List current workspace memories and globals | `memo list` |
 | List a specific workspace | `memo list --workspace /path/to/project` |
 | Add a workspace memory | `memo add "project fact"` |
@@ -60,7 +61,7 @@ project directory.
 
 ## Output
 
-`add`, `get`, `list`, `edit`, and `delete` print XML.
+`context`, `add`, `get`, `list`, `edit`, and `delete` print XML.
 
 Example memory:
 
@@ -74,6 +75,10 @@ Example memory:
 
 `memo list` prints a `<memories>` wrapper with `<memory>` children.
 
+`memo context` prints a `<memo_context>` wrapper with short instructions and
+the current workspace plus global memories. It is intended for session-start
+hooks in coding-agent harnesses.
+
 `memo delete` prints `<delete_results>` with ordered `<deleted>` and `<failure>`
 children.
 
@@ -84,9 +89,19 @@ children.
 Run `memo skill` to print a self-contained Markdown guide for LLMs. It explains
 when to add, edit, delete, or preserve memories, plus the output contract.
 
+For session-start hooks, run:
+
+```bash
+memo context
+```
+
+This loads durable memory context and tells the agent to consult `memo skill`
+before adding, editing, or deleting memories.
+
 Basic rules:
 
-- Run `memo list` before deciding what to change.
+- Use loaded memory context before deciding what to change. Run `memo list` only
+  when memory context is missing, stale, ambiguous, or for the wrong workspace.
 - Save only durable, confirmed, hard-to-recover information.
 - Use `memo edit` when a memory remains useful but needs correction.
 - Use `memo delete` only when a memory is confirmed obsolete or incorrect.

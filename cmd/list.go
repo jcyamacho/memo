@@ -2,8 +2,6 @@ package cmd
 
 import (
 	"encoding/xml"
-	"fmt"
-	"os"
 
 	"github.com/jcyamacho/memo/internal/memory"
 	"github.com/spf13/cobra"
@@ -29,13 +27,9 @@ memories. The command returns the full result set with no pagination as XML.`,
   memo ls
   memo list --workspace /path/to/project`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		workspacePath := listWorkspace
-		if workspacePath == "" {
-			cwd, err := os.Getwd()
-			if err != nil {
-				return fmt.Errorf("resolve working directory: %w", err)
-			}
-			workspacePath = cwd
+		workspacePath, err := resolveWorkspacePath(listWorkspace)
+		if err != nil {
+			return err
 		}
 
 		items, err := service.List(cmd.Context(), workspacePath)

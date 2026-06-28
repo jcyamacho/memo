@@ -40,3 +40,14 @@ func printOutput(output string, err error) error {
 	fmt.Println(output)
 	return nil
 }
+
+func resolveWorkspacePath(workspaceFlag string) (string, error) {
+	if workspaceFlag != "" {
+		return workspaceFlag, nil
+	}
+	cwd, err := os.Getwd()
+	if err != nil {
+		return "", fmt.Errorf("resolve working directory: %w", err)
+	}
+	return cwd, nil
+}

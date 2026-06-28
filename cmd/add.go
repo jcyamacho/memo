@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/jcyamacho/memo/internal/memory"
 	"github.com/spf13/cobra"
@@ -43,13 +42,12 @@ rejected after trimming.`,
 			return err
 		}
 
-		workspacePath := addWorkspace
-		if !addGlobal && workspacePath == "" {
-			cwd, err := os.Getwd()
+		var workspacePath string
+		if !addGlobal {
+			workspacePath, err = resolveWorkspacePath(addWorkspace)
 			if err != nil {
-				return fmt.Errorf("resolve working directory: %w", err)
+				return err
 			}
-			workspacePath = cwd
 		}
 
 		m, err := service.Add(cmd.Context(), memory.AddParams{

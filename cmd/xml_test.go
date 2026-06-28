@@ -46,6 +46,50 @@ func TestMemoryXMLGlobal(t *testing.T) {
 	}
 }
 
+func TestContextXML(t *testing.T) {
+	t.Parallel()
+
+	updatedAt := time.Date(2026, 3, 1, 12, 0, 0, 0, time.UTC)
+	workspaceMemory, err := memory.Load("workspace-id", "workspace fact", "/repo", updatedAt)
+	if err != nil {
+		t.Fatalf("memory.Load workspace: %v", err)
+	}
+	globalMemory, err := memory.Load("global-id", "global fact", "", updatedAt)
+	if err != nil {
+		t.Fatalf("memory.Load global: %v", err)
+	}
+
+	got, err := contextXMLOutput("/repo", []memory.MemoryDTO{
+		workspaceMemory.DTO(),
+		globalMemory.DTO(),
+	})
+	if err != nil {
+		t.Fatalf("contextXMLOutput: %v", err)
+	}
+
+	if !strings.Contains(got, `<memo_context workspace="/repo">`) {
+		t.Fatalf("missing context workspace: %s", got)
+	}
+	if !strings.Contains(got, "Durable memories are managed by the `memo` CLI") {
+		t.Fatalf("missing durable memory instruction: %s", got)
+	}
+	if !strings.Contains(got, "run `memo skill` unless its rules are already in context") {
+		t.Fatalf("missing memo skill instruction: %s", got)
+	}
+	if strings.Contains(got, "<instruction>") {
+		t.Fatalf("instructions should be a single text node: %s", got)
+	}
+	if count := strings.Count(got, `workspace="/repo"`); count != 1 {
+		t.Fatalf("workspace attribute count = %d, want 1: %s", count, got)
+	}
+	if !strings.Contains(got, `<memory id="workspace-id" updated_at="2026-03-01T12:00:00.000Z">workspace fact</memory>`) {
+		t.Fatalf("missing workspace memory: %s", got)
+	}
+	if !strings.Contains(got, `<memory id="global-id" updated_at="2026-03-01T12:00:00.000Z" global="true">global fact</memory>`) {
+		t.Fatalf("missing global memory: %s", got)
+	}
+}
+
 func TestDeleteResultsXML(t *testing.T) {
 	t.Parallel()
 

@@ -18,11 +18,11 @@ Scope:
   Global memories apply across projects and are created with --global.
 
 Output:
-  add, get, list, edit, and delete print XML intended to be easy for humans to
-  inspect and stable for LLM tools to parse.
+  context, add, get, list, edit, and delete print XML intended to be easy for
+  humans to inspect and stable for LLM tools to parse.
 
 Agent rules:
-  Use list before deciding what to add, edit, or delete.
+  Use loaded memory context before deciding what to add, edit, or delete.
   Store durable facts, preferences, and project context. Do not store secrets.
   Use edit for corrections to an existing memory. Use delete only for obsolete
   or incorrect memories.
@@ -31,6 +31,7 @@ Store:
   Set MEMO_CONFIG_DIR to choose the store directory. The default is
   ~/.config/memo.`,
 	Example: `  memo list
+  memo context
   memo add "prefer small Go interfaces"
   some-command | memo add --global
   memo edit abc123 --content "corrected memory"
