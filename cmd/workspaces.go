@@ -12,8 +12,9 @@ func init() {
 }
 
 var workspacesCmd = &cobra.Command{
-	Use:   "workspaces",
-	Short: "List workspace paths that have memories",
+	Use:     "workspaces",
+	Aliases: []string{"ws"},
+	Short:   "List workspace paths that have memories",
 	Long: `List all workspace paths that have workspace-scoped memories.
 
 Global memories are not included. The output is plain text with one absolute
