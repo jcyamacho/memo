@@ -1,11 +1,11 @@
 package memory
 
 import (
-	"crypto/rand"
-	"encoding/base64"
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type Memory struct {
@@ -114,9 +114,9 @@ func (m *Memory) touch() {
 }
 
 func newID() (string, error) {
-	var buf [12]byte
-	if _, err := rand.Read(buf[:]); err != nil {
+	id, err := uuid.NewRandom()
+	if err != nil {
 		return "", err
 	}
-	return base64.RawURLEncoding.EncodeToString(buf[:]), nil
+	return id.String(), nil
 }
