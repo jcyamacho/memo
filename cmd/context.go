@@ -18,8 +18,9 @@ func init() {
 }
 
 var contextCmd = &cobra.Command{
-	Use:   "context",
-	Short: "Print session-start context for coding agents",
+	Use:     "context",
+	Aliases: []string{"ctx"},
+	Short:   "Print session-start context for coding agents",
 	Long: `Print durable memory context for a coding agent session.
 
 The output includes a short instruction block plus workspace and global memories.
