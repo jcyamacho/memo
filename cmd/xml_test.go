@@ -15,7 +15,7 @@ func TestMemoriesXMLEmpty(t *testing.T) {
 	if err != nil {
 		t.Fatalf("memoriesXMLOutput: %v", err)
 	}
-	want := `<memories workspace="/repo" has_more="false"></memories>`
+	want := `<memories workspace="/repo"></memories>`
 	if got != want {
 		t.Fatalf("got %q, want %q", got, want)
 	}

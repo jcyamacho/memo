@@ -49,14 +49,12 @@ memories. The command returns the full result set with no pagination as XML.`,
 type memoriesXML struct {
 	XMLName   xml.Name    `xml:"memories"`
 	Workspace string      `xml:"workspace,attr"`
-	HasMore   bool        `xml:"has_more,attr"`
 	Items     []memoryXML `xml:"memory"`
 }
 
 func memoriesXMLOutput(workspace string, items []memory.MemoryDTO) (string, error) {
 	dto := memoriesXML{
 		Workspace: workspace,
-		HasMore:   false,
 		Items:     make([]memoryXML, 0, len(items)),
 	}
 

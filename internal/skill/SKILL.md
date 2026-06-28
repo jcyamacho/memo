@@ -1,116 +1,102 @@
 # memo CLI Skill
 
-Use memo as a curated store of durable, hard-to-recover context for humans and
-coding agents. Keep memories small and trustworthy. Do not turn the store into a
-task log or a copy of the repository.
+Use memo for durable, hard-to-recover context. Keep memories small, confirmed,
+and useful for future sessions. Do not store task logs, repo copies, secrets,
+credentials, tokens, guesses, or temporary progress.
 
-## Command Mapping
+## Commands
 
-| Intent | CLI command |
+| Intent | Command |
 | --- | --- |
 | Review memories | `memo list [--workspace <path>]` |
-| Remember a workspace memory | `memo add [--workspace <path>] <content>` |
-| Remember a global memory | `memo add --global <content>` |
-| Remember piped content | `some-command \| memo add [--global]` |
-| Read one memory | `memo get <id>` |
-| Revise content | `memo edit <id> --content <content>` |
-| Revise piped content | `some-command \| memo edit <id>` |
+| Add workspace memory | `memo add [--workspace <path>] <content>` |
+| Add global memory | `memo add --global <content>` |
+| Add piped content | `some-command \| memo add [--global]` |
+| Read memory | `memo get <id>` |
+| Edit content | `memo edit <id> --content <content>` |
+| Edit piped content | `some-command \| memo edit <id>` |
 | Promote to global | `memo edit <id> --global` |
-| Forget memories | `memo delete <id> [id...]` |
+| Delete memories | `memo delete <id> [id...]` |
 | List known workspaces | `memo workspaces` |
 
-## Workflow
+## Memory Context
 
-1. Run `memo list` from the target project before deciding what to add, edit, or
-   delete for the current workspace. Let the CLI resolve the workspace from the
-   current directory so Git repositories are scoped to their repo root. Use
-   `--workspace <path>` only when you cannot run the command from the target
-   project directory.
-2. Apply relevant memories as context, but verify drift-prone facts against the
-   current repository or environment.
-3. During the task, treat confirmed corrections, preferences, decisions,
-   constraints, and difficult discoveries as memory candidates.
-4. Before saving a candidate, apply the durability gate and compare it with
-   loaded memories.
-5. Use add, edit, delete, or no operation according to the maintenance rules.
-6. Maintain only memories related to the current task. Perform a full-store
-   maintenance sweep only when the user requests one.
+Before adding, editing, or deleting, ensure current memories for the target
+workspace plus globals are in context.
+
+- Use memories already present from the conversation, session-start hook, or an
+  earlier `memo list` when they are current for the target workspace.
+- Run `memo list` from the target project only when memories are missing,
+  incomplete, stale, ambiguous, or from another workspace.
+- Use `memo list --workspace <path>` only when you cannot run from the target
+  project directory.
+- Verify drift-prone memories against current files, commands, or environment.
+- Maintain only memories related to the current task unless the user requests a
+  full-store cleanup.
+
+## Mutations
+
+- Add when the candidate passes the durability gate and no similar memory
+  already exists.
+- Edit when a known memory id still represents the right durable idea but its
+  content or scope should change.
+- Delete when a known memory id is obsolete, incorrect, or redundant. Add or
+  edit the replacement before deleting the old memory.
+- Do nothing when the candidate is already represented, too weak, unverifiable,
+  or unrelated.
 
 ## Durability Gate
 
 Save a candidate only when every answer is yes:
 
-1. Will it probably change or improve work in a future session?
-2. Is it expected to remain true beyond the current task?
-3. Would recovering it again require user correction, investigation, or
-   non-obvious reasoning?
+1. Will it improve future work?
+2. Is it expected to remain true beyond this task?
+3. Would recovering it require user correction, investigation, or non-obvious
+   reasoning?
 4. Is it confirmed rather than speculative?
-5. Can it be expressed as one independently reusable idea?
+5. Is it one independently reusable idea?
 
-Strong candidates include explicit user corrections, stable preferences,
-decisions whose reasoning affects future choices, non-obvious project or
-environment constraints, confirmed debugging insights, and recurring failure
-modes with known fixes.
+Good candidates: explicit user corrections, stable preferences, durable
+decisions with reusable reasoning, non-obvious project constraints, confirmed
+debugging discoveries, and recurring failure modes with known fixes.
 
-Reject temporary task state, progress, plans, reminders, chronological summaries,
-facts readily visible in current files, generic knowledge, guesses, unresolved
-possibilities, secrets, credentials, tokens, personal data, and sensitive
-content.
+Reject: task state, progress, plans, reminders, chronological summaries, facts
+visible in current files, generic knowledge, guesses, unresolved possibilities,
+personal data, and sensitive content.
 
-## Atomic Memory Writing
+## Scope
 
-Write one independently reusable idea in one to three sentences. Include scope or
-applicability in the text when it is not obvious. Split clauses that can become
-false independently.
-
-Good:
-
-```text
-Deploys must run from the release branch, not main. Releasing from main skips
-the changelog check and the pipeline rejects the build.
-```
-
-Bad:
-
-```text
-We reviewed the pipeline, fixed the changelog check, updated the release docs,
-ran the tests, and discussed future improvements.
-```
-
-## Maintenance Rules
-
-- Use `memo add` when the candidate passes the gate and no duplicate exists.
-- Do nothing when a duplicate already exists.
-- Use `memo edit` when the same durable idea remains relevant but its content
-  changed.
-- Use `memo delete` only when a memory is confirmed obsolete or incorrect.
-- When duplicates exist, keep the clearest one and delete the redundant IDs.
-- When a memory combines independently useful ideas, add or edit the atomic
-  replacements before deleting the compound original.
-- When correctness or obsolescence is uncertain, preserve the memory and surface
-  the uncertainty instead of deleting it.
-
-## Scope Rules
-
-- Workspace scope is the default. Use it for project, repository, tool, or
-  environment-specific knowledge.
-- Use `--global` only for preferences or facts that genuinely apply across
-  projects.
-- Promote a workspace memory with `memo edit <id> --global` only after
-  confirming it is universal. Prefer promotion over delete-and-add when the same
-  memory remains correct and only its scope changes.
+- Workspace is the default for project facts, repository decisions, local
+  commands, architecture, and environment constraints.
+- Global is rare. Use it only for stable preferences or facts that genuinely
+  apply across projects.
+- Promote with `memo edit <id> --global` when the same memory should become
+  global.
 - To replace an incorrectly global memory with a workspace memory, create the
-  workspace-scoped replacement first, then delete the global memory.
+  workspace memory first, then delete the global one.
+
+## Writing
+
+- Write one reusable idea in one to three sentences.
+- Include scope or applicability when it is not obvious.
+- Split clauses that can become false independently.
+- Prefer direct wording over summaries of what happened.
+
+Examples:
+
+- Add: `User prefers Bun for JavaScript package management.`
+- Add as workspace: `Deploys must run from the release branch.`
+- Reject: `This repo has a README.md file.`
+- Reject: `Tests passed after the latest edit.`
+- No-op: an equivalent Bun preference already exists.
 
 ## Output Contract
 
 - `memo add`, `memo get`, `memo list`, `memo edit`, and `memo delete` print XML.
-- `memo list` prints a `<memories>` wrapper with `<memory>` children.
+- `memo list` prints `<memories>` with `<memory>` children.
 - Memory elements include `id` and `updated_at`. Global memories include
   `global="true"`. Memories from another workspace include `workspace="..."`.
-  Memories for the requested workspace may omit the `workspace` attribute.
-- `memo delete` prints `<delete_results>` with `<deleted>` and `<failure>`
-  children.
+- `memo delete` prints `<delete_results>` with `<deleted>` and `<failure>`.
 - `memo workspaces` prints plain text paths, one per line.
 
 Set `MEMO_CONFIG_DIR` to choose the store directory. The default is
