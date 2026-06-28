@@ -7,6 +7,11 @@ import (
 	"testing"
 )
 
+const (
+	testDirectoryPerm = 0o755
+	testFilePerm      = 0o644
+)
+
 func TestGitResolverPassthroughWithoutGit(t *testing.T) {
 	t.Parallel()
 
@@ -35,9 +40,7 @@ func TestGitResolverFindsGitRootFromNestedPath(t *testing.T) {
 
 	repo := initGitRepo(t)
 	nested := filepath.Join(repo, "internal", "workspace")
-	if err := os.MkdirAll(nested, 0o755); err != nil {
-		t.Fatalf("MkdirAll: %v", err)
-	}
+	mkdirAll(t, nested)
 
 	got, err := GitResolver{}.Resolve(t.Context(), nested)
 	if err != nil {
@@ -58,9 +61,7 @@ func TestGitResolverFindsLinkedWorktreeRoot(t *testing.T) {
 	runGit(t, repo, "worktree", "add", "--detach", worktree, "HEAD")
 
 	nested := filepath.Join(worktree, "internal", "workspace")
-	if err := os.MkdirAll(nested, 0o755); err != nil {
-		t.Fatalf("MkdirAll: %v", err)
-	}
+	mkdirAll(t, nested)
 
 	got, err := GitResolver{}.Resolve(t.Context(), nested)
 	if err != nil {
@@ -84,22 +85,28 @@ func initGitRepo(t *testing.T) string {
 	t.Helper()
 
 	repo := filepath.Join(t.TempDir(), "repo")
-	if err := os.MkdirAll(repo, 0o755); err != nil {
-		t.Fatalf("MkdirAll: %v", err)
-	}
+	mkdirAll(t, repo)
 
 	runGit(t, repo, "init")
 	runGit(t, repo, "config", "user.email", "test@example.com")
 	runGit(t, repo, "config", "user.name", "Test User")
 
 	readme := filepath.Join(repo, "README.md")
-	if err := os.WriteFile(readme, []byte("test repo\n"), 0o644); err != nil {
+	if err := os.WriteFile(readme, []byte("test repo\n"), testFilePerm); err != nil {
 		t.Fatalf("WriteFile: %v", err)
 	}
 	runGit(t, repo, "add", "README.md")
 	runGit(t, repo, "commit", "-m", "initial commit")
 
 	return repo
+}
+
+func mkdirAll(t *testing.T, path string) {
+	t.Helper()
+
+	if err := os.MkdirAll(path, testDirectoryPerm); err != nil {
+		t.Fatalf("MkdirAll: %v", err)
+	}
 }
 
 func runGit(t *testing.T, dir string, args ...string) {
