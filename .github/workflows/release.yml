@@ -34,11 +34,22 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAP_GITHUB_TOKEN: ${{ secrets.TAP_GITHUB_TOKEN }}
 
+      - name: Calculate formula source checksum
+        id: formula-source
+        run: |
+          url="https://github.com/${GITHUB_REPOSITORY}/archive/refs/tags/${GITHUB_REF_NAME}.tar.gz"
+          sha256="$(curl -fsSL "$url" | sha256sum | awk '{print $1}')"
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "sha256=$sha256" >> "$GITHUB_OUTPUT"
+
       - name: Bump Homebrew formula
         uses: mislav/bump-homebrew-formula-action@v4.1
         with:
           formula-name: memo
           formula-path: Formula/memo.rb
+          tag-name: ${{ github.ref_name }}
+          download-url: ${{ steps.formula-source.outputs.url }}
+          download-sha256: ${{ steps.formula-source.outputs.sha256 }}
           homebrew-tap: jcyamacho/homebrew-tap
           base-branch: main
           commit-message: |
