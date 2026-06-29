@@ -33,3 +33,17 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAP_GITHUB_TOKEN: ${{ secrets.TAP_GITHUB_TOKEN }}
+
+      - name: Bump Homebrew formula
+        uses: mislav/bump-homebrew-formula-action@v4.1
+        with:
+          formula-name: memo
+          formula-path: Formula/memo.rb
+          homebrew-tap: jcyamacho/homebrew-tap
+          base-branch: main
+          commit-message: |
+            {{formulaName}} {{version}}
+
+            Update memo formula to {{version}}.
+        env:
+          COMMITTER_TOKEN: ${{ secrets.TAP_GITHUB_TOKEN }}
