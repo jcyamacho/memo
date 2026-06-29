@@ -1,6 +1,7 @@
 [tools]
 go = "latest"
 golangci-lint = "2.12.2"
+"aqua:caarlos0/svu" = "latest"
 
 [tasks.test]
 description = "Run Go tests"
@@ -17,3 +18,37 @@ run = "go build ./..."
 [tasks.check]
 description = "Run all checks"
 depends = ["lint", "test", "build"]
+
+[tasks.release]
+description = "Create and push a release tag: mise run release patch|minor|major"
+run = '''
+bump="${1:-}"
+
+if ! git diff --quiet || ! git diff --cached --quiet; then
+  echo "worktree is dirty; commit or stash changes before releasing" >&2
+  exit 1
+fi
+
+git fetch --tags origin
+
+case "$bump" in
+  patch|fix)
+    next="$(svu patch)"
+    ;;
+  minor)
+    next="$(svu minor)"
+    ;;
+  major)
+    next="$(svu major)"
+    ;;
+  *)
+    echo "usage: mise run release patch|minor|major" >&2
+    exit 1
+    ;;
+esac
+
+mise run check
+
+git tag -a "$next" -m "Release $next"
+git push origin "$next"
+'''

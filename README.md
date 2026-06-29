@@ -8,7 +8,13 @@ for future sessions.
 
 ## Install
 
-Install the latest published version with Go:
+Install the latest published version with Homebrew:
+
+```bash
+brew install --cask jcyamacho/tap/memo
+```
+
+Or install with Go:
 
 ```bash
 go install github.com/jcyamacho/memo@latest
@@ -58,6 +64,7 @@ project directory.
 | Delete memories | `memo delete <id> [id...]` |
 | List known workspaces | `memo workspaces` |
 | Print LLM operating guide | `memo skill` |
+| Print release version | `memo version` |
 
 ## Output
 
@@ -130,3 +137,19 @@ go build ./...
 ```
 
 Format changed Go files with `gofmt`.
+
+## Release
+
+Releases are published by pushing a version tag:
+
+```bash
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+The release workflow runs the full check suite, builds binaries with
+GoReleaser, publishes a GitHub Release, and updates the `memo` cask in
+`jcyamacho/homebrew-tap`.
+
+The repository must have a `TAP_GITHUB_TOKEN` secret with write access to
+`jcyamacho/homebrew-tap`.

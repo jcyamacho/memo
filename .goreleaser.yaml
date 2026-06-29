@@ -1,0 +1,64 @@
+version: 2
+
+project_name: memo
+
+before:
+  hooks:
+    - go mod download
+
+builds:
+  - id: memo
+    main: .
+    binary: memo
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - darwin
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X github.com/jcyamacho/memo/cmd.version={{ .Version }} -X github.com/jcyamacho/memo/cmd.commit={{ .Commit }} -X github.com/jcyamacho/memo/cmd.date={{ .CommitDate }}
+
+archives:
+  - id: memo
+    ids:
+      - memo
+    formats:
+      - tar.gz
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- .Version }}_
+      {{- .Os }}_
+      {{- .Arch }}
+
+checksum:
+  name_template: checksums.txt
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+
+homebrew_casks:
+  - name: memo
+    ids:
+      - memo
+    repository:
+      owner: jcyamacho
+      name: homebrew-tap
+      token: "{{ .Env.TAP_GITHUB_TOKEN }}"
+    directory: Casks
+    homepage: "https://github.com/jcyamacho/memo"
+    description: "Durable memory CLI for humans and coding agents"
+    binaries:
+      - memo
+    commit_msg_template: "brew: update memo to {{ .Tag }}"
