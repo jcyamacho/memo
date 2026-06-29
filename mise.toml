@@ -21,8 +21,13 @@ depends = ["lint", "test", "build"]
 
 [tasks.release]
 description = "Create and push a release tag: mise run release patch|minor|major"
+usage = '''
+arg "<bump>" help="Version bump" {
+  choices "patch" "fix" "minor" "major"
+}
+'''
 run = '''
-bump="${1:-}"
+bump="${usage_bump}"
 
 if ! git diff --quiet || ! git diff --cached --quiet; then
   echo "worktree is dirty; commit or stash changes before releasing" >&2
