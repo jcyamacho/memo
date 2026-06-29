@@ -176,7 +176,7 @@ func (s *FS) resolveListTargets(workspace string, options memory.ListOptions) ([
 			return nil, err
 		}
 		for _, target := range workspaceTargets {
-			targets = append(targets, listTarget{path: target.path, workspace: target.workspace})
+			targets = append(targets, listTarget(target))
 		}
 	}
 

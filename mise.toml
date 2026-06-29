@@ -1,0 +1,19 @@
+[tools]
+go = "latest"
+golangci-lint = "2.12.2"
+
+[tasks.test]
+description = "Run Go tests"
+run = "go test ./..."
+
+[tasks.lint]
+description = "Run golangci-lint"
+run = "golangci-lint run"
+
+[tasks.build]
+description = "Compile all packages"
+run = "go build ./..."
+
+[tasks.check]
+description = "Run all checks"
+depends = ["lint", "test", "build"]

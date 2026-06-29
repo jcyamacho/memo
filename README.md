@@ -109,10 +109,24 @@ Basic rules:
 
 ## Development
 
-Run tests:
+Install project tools with mise:
 
 ```bash
+mise install
+```
+
+Run the full check suite:
+
+```bash
+mise run check
+```
+
+This runs lint, tests, and a compile check:
+
+```bash
+golangci-lint run
 go test ./...
+go build ./...
 ```
 
 Format changed Go files with `gofmt`.
