@@ -11,7 +11,7 @@ for future sessions.
 Install the latest published version with Homebrew:
 
 ```bash
-brew install --cask jcyamacho/tap/memo
+brew install jcyamacho/tap/memo
 ```
 
 Or install with Go:

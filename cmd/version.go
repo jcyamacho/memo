@@ -1,16 +1,8 @@
 package cmd
 
-import (
-	"fmt"
+import "github.com/spf13/cobra"
 
-	"github.com/spf13/cobra"
-)
-
-var (
-	version = "dev"
-	commit  = "none"
-	date    = "unknown"
-)
+var version = "dev"
 
 func init() {
 	rootCmd.AddCommand(versionCmd)
@@ -21,10 +13,10 @@ var versionCmd = &cobra.Command{
 	Short: "Print release version information",
 	Args:  cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return printOutput(versionOutput(version, commit, date))
+		return printOutput(versionOutput(version))
 	},
 }
 
-func versionOutput(version, commit, date string) (string, error) {
-	return fmt.Sprintf("memo %s (commit %s, built %s)", version, commit, date), nil
+func versionOutput(version string) (string, error) {
+	return "memo " + version, nil
 }

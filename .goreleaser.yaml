@@ -21,7 +21,7 @@ builds:
     flags:
       - -trimpath
     ldflags:
-      - -s -w -X github.com/jcyamacho/memo/cmd.version={{ .Version }} -X github.com/jcyamacho/memo/cmd.commit={{ .Commit }} -X github.com/jcyamacho/memo/cmd.date={{ .CommitDate }}
+      - -s -w -X github.com/jcyamacho/memo/cmd.version={{ .Version }}
 
 archives:
   - id: memo
@@ -47,18 +47,3 @@ changelog:
     exclude:
       - "^docs:"
       - "^test:"
-
-homebrew_casks:
-  - name: memo
-    ids:
-      - memo
-    repository:
-      owner: jcyamacho
-      name: homebrew-tap
-      token: "{{ .Env.TAP_GITHUB_TOKEN }}"
-    directory: Casks
-    homepage: "https://github.com/jcyamacho/memo"
-    description: "Durable memory CLI for humans and coding agents"
-    binaries:
-      - memo
-    commit_msg_template: "brew: update memo to {{ .Tag }}"
