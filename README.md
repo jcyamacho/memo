@@ -105,6 +105,46 @@ memo context
 This loads durable memory context and tells the agent to consult `memo skill`
 before adding, editing, or deleting memories.
 
+Claude Code can run this from either `~/.claude/settings.json` or a project
+`.claude/settings.json` file:
+
+```json
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "memo context"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+Codex CLI can run this from `~/.codex/hooks.json`:
+
+```json
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "memo context"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
 Basic rules:
 
 - Use loaded memory context before deciding what to change. Run `memo list` only
