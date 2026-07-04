@@ -3,6 +3,8 @@ package memory
 import (
 	"testing"
 	"time"
+
+	"github.com/jcyamacho/memo/internal/pkg/testutil"
 )
 
 func TestSetContentTouchesOnlyWhenContentChanges(t *testing.T) {
@@ -18,20 +20,14 @@ func TestSetContentTouchesOnlyWhenContentChanges(t *testing.T) {
 	if err != nil {
 		t.Fatalf("SetContent unchanged: %v", err)
 	}
-	if changed {
-		t.Fatal("SetContent unchanged reported a change")
-	}
-	if !m.UpdatedAt().Equal(updatedAt) {
-		t.Fatalf("UpdatedAt changed to %s, want %s", m.UpdatedAt(), updatedAt)
-	}
+	testutil.AssertEqual(t, false, changed)
+	testutil.AssertEqual(t, updatedAt, m.UpdatedAt())
 
 	changed, err = m.SetContent("new content")
 	if err != nil {
 		t.Fatalf("SetContent changed: %v", err)
 	}
-	if !changed {
-		t.Fatal("SetContent changed reported no change")
-	}
+	testutil.AssertEqual(t, true, changed)
 	if !m.UpdatedAt().After(updatedAt) {
 		t.Fatalf("UpdatedAt = %s, want after %s", m.UpdatedAt(), updatedAt)
 	}
@@ -46,21 +42,13 @@ func TestPromoteToGlobalTouchesOnlyWhenScopeChanges(t *testing.T) {
 		t.Fatalf("Load: %v", err)
 	}
 
-	if !m.PromoteToGlobal() {
-		t.Fatal("PromoteToGlobal reported no change")
-	}
-	if !m.IsGlobal() {
-		t.Fatal("memory is not global")
-	}
+	testutil.AssertEqual(t, true, m.PromoteToGlobal())
+	testutil.AssertEqual(t, true, m.IsGlobal())
 	if !m.UpdatedAt().After(updatedAt) {
 		t.Fatalf("UpdatedAt = %s, want after %s", m.UpdatedAt(), updatedAt)
 	}
 
 	promotedAt := m.UpdatedAt()
-	if m.PromoteToGlobal() {
-		t.Fatal("PromoteToGlobal on global memory reported a change")
-	}
-	if !m.UpdatedAt().Equal(promotedAt) {
-		t.Fatalf("UpdatedAt changed to %s, want %s", m.UpdatedAt(), promotedAt)
-	}
+	testutil.AssertEqual(t, false, m.PromoteToGlobal())
+	testutil.AssertEqual(t, promotedAt, m.UpdatedAt())
 }
