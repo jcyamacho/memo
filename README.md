@@ -3,8 +3,8 @@
 `memo` is a small CLI for storing durable memories for humans and coding agents:
 project facts, stable preferences, decisions, and hard-to-recover context.
 
-It is intentionally not a task log. Keep memories small, confirmed, and useful
-for future sessions.
+The main setup is simple: install the CLI, configure your coding-agent hook, and
+let the agent load `memo context` at session start.
 
 ## Install
 
@@ -21,6 +21,78 @@ go install github.com/jcyamacho/memo@latest
 ```
 
 Make sure your Go binary directory is on `PATH` (`$GOBIN` or `$GOPATH/bin`).
+
+Confirm the CLI is available:
+
+```bash
+memo version
+```
+
+## Configure Agent Hooks
+
+Configure the hook for the agent harness you use:
+
+```bash
+memo hook codex
+memo hook claude
+```
+
+These commands update the global agent config and preserve unrelated hooks. They
+install a session-start hook that runs:
+
+```bash
+memo context
+```
+
+`memo context` loads workspace and global memories, then tells the agent to use
+`memo skill` before adding, editing, or deleting memories.
+
+Codex configures `~/.codex/hooks.json` with:
+
+```json
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "memo context",
+            "statusMessage": "Loading memories",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+Claude Code configures `~/.claude/settings.json` with:
+
+```json
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "memo context"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+Run this once to inspect the same operating guide the agent will use:
+
+```bash
+memo skill
+```
 
 ## Storage
 
@@ -49,9 +121,15 @@ project directory.
 
 ## Commands
 
+Most users only need `memo hook codex` or `memo hook claude`. The remaining
+commands are mainly for agents and for manual memory maintenance.
+
 | Intent | Command |
 | --- | --- |
-| Print session-start context for agents | `memo context` |
+| Configure Codex session-start hook | `memo hook codex` |
+| Configure Claude session-start hook | `memo hook claude` |
+| Print the LLM operating guide | `memo skill` |
+| Print session-start context | `memo context` |
 | List current workspace memories and globals | `memo list` |
 | List a specific workspace | `memo list --workspace /path/to/project` |
 | Add a workspace memory | `memo add "project fact"` |
@@ -63,8 +141,10 @@ project directory.
 | Promote to global | `memo edit <id> --global` |
 | Delete memories | `memo delete <id> [id...]` |
 | List known workspaces | `memo workspaces` |
-| Print LLM operating guide | `memo skill` |
 | Print release version | `memo version` |
+
+Run `memo skill` to inspect the operating guide that agents should follow when
+maintaining memories.
 
 ## Output
 
@@ -90,69 +170,6 @@ hooks in coding-agent harnesses.
 children.
 
 `memo workspaces` prints plain text paths, one per line.
-
-## Agent Use
-
-Run `memo skill` to print a self-contained Markdown guide for LLMs. It explains
-when to add, edit, delete, or preserve memories, plus the output contract.
-
-For session-start hooks, run:
-
-```bash
-memo context
-```
-
-This loads durable memory context and tells the agent to consult `memo skill`
-before adding, editing, or deleting memories.
-
-Claude Code can run this from either `~/.claude/settings.json` or a project
-`.claude/settings.json` file:
-
-```json
-{
-  "hooks": {
-    "SessionStart": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "memo context"
-          }
-        ]
-      }
-    ]
-  }
-}
-```
-
-Codex CLI can run this from `~/.codex/hooks.json`:
-
-```json
-{
-  "hooks": {
-    "SessionStart": [
-      {
-        "matcher": "startup|resume|clear|compact",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "memo context"
-          }
-        ]
-      }
-    ]
-  }
-}
-```
-
-Basic rules:
-
-- Use loaded memory context before deciding what to change. Run `memo list` only
-  when memory context is missing, stale, ambiguous, or for the wrong workspace.
-- Save only durable, confirmed, hard-to-recover information.
-- Use `memo edit` when a memory remains useful but needs correction.
-- Use `memo delete` only when a memory is confirmed obsolete or incorrect.
-- Do not store secrets, credentials, tokens, temporary task state, or guesses.
 
 ## Development
 

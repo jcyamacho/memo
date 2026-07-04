@@ -3,6 +3,7 @@ module github.com/jcyamacho/memo
 go 1.26.4
 
 require (
+	github.com/google/go-cmp v0.7.0
 	github.com/google/uuid v1.6.0
 	github.com/spf13/cobra v1.10.2
 )
