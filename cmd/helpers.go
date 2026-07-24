@@ -4,10 +4,13 @@ import (
 	"fmt"
 	"io"
 	"os"
+
+	"github.com/jcyamacho/memo/internal/memory"
+	"github.com/spf13/cobra"
 )
 
-func readContent(args []string) (string, error) {
-	return readContentFrom(args, stdinReader(os.Stdin))
+func readContent(cmd *cobra.Command, args []string) (string, error) {
+	return readContentFrom(args, stdinReader(cmd.InOrStdin()))
 }
 
 func readContentFrom(args []string, stdin io.Reader) (string, error) {
@@ -25,20 +28,35 @@ func readContentFrom(args []string, stdin io.Reader) (string, error) {
 	return string(data), nil
 }
 
-func stdinReader(stdin *os.File) io.Reader {
-	info, err := stdin.Stat()
+func stdinReader(stdin io.Reader) io.Reader {
+	file, ok := stdin.(*os.File)
+	if !ok {
+		return stdin
+	}
+
+	info, err := file.Stat()
 	if err != nil || info.Mode()&os.ModeCharDevice != 0 {
 		return nil
 	}
+
 	return stdin
 }
 
-func printOutput(output string, err error) error {
-	if err != nil {
-		return err
+func printOutput(cmd *cobra.Command, output string) error {
+	if _, err := fmt.Fprintln(cmd.OutOrStdout(), output); err != nil {
+		return fmt.Errorf("write output: %w", err)
 	}
-	fmt.Println(output)
+
 	return nil
+}
+
+func parseMemoryID(value string) (memory.ID, error) {
+	id, err := memory.ParseID(value)
+	if err != nil {
+		return memory.ID{}, fmt.Errorf("memory id %q: %w", value, err)
+	}
+
+	return id, nil
 }
 
 func resolveWorkspacePath(workspaceFlag string) (string, error) {

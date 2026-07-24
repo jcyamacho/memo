@@ -22,7 +22,7 @@ func memoryXMLOutput(m memory.MemoryDTO) (string, error) {
 
 func newMemoryXML(m memory.MemoryDTO, skipWorkspaceIfEquals string) memoryXML {
 	dto := memoryXML{
-		ID:        m.ID,
+		ID:        m.ID.String(),
 		UpdatedAt: m.UpdatedAt.UTC().Format("2006-01-02T15:04:05.000Z"),
 		Content:   m.Content,
 	}

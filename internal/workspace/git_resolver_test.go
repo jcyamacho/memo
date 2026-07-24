@@ -52,7 +52,7 @@ func TestGitResolverFindsGitRootFromNestedPath(t *testing.T) {
 	}
 }
 
-func TestGitResolverFindsLinkedWorktreeRoot(t *testing.T) {
+func TestGitResolverMapsLinkedWorktreeToMainWorkspace(t *testing.T) {
 	t.Parallel()
 	requireGit(t)
 
@@ -67,7 +67,7 @@ func TestGitResolverFindsLinkedWorktreeRoot(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GitResolver.Resolve: %v", err)
 	}
-	want := canonicalPath(t, worktree)
+	want := canonicalPath(t, repo)
 	if got != want {
 		t.Fatalf("got %q, want %q", got, want)
 	}

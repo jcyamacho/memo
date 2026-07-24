@@ -12,18 +12,17 @@ type mockStore struct {
 	inserted  []Memory
 	insertErr error
 
-	getByID    map[string]Memory
-	getErrByID map[string]error
+	getByID    map[ID]Memory
+	getErrByID map[ID]error
 
-	listItems          []Memory
-	listErr            error
-	listWorkspace      string
-	listIncludeGlobals bool
+	listItems     []Memory
+	listErr       error
+	listWorkspace string
 
 	updated   []Memory
 	updateErr error
 
-	deleteErrByID map[string]error
+	deleteErrByID map[ID]error
 	deletedIDs    []string
 
 	workspaces        []string
@@ -35,9 +34,9 @@ func newMockStore(t *testing.T) *mockStore {
 
 	return &mockStore{
 		t:             t,
-		getByID:       make(map[string]Memory),
-		getErrByID:    make(map[string]error),
-		deleteErrByID: make(map[string]error),
+		getByID:       make(map[ID]Memory),
+		getErrByID:    make(map[ID]error),
+		deleteErrByID: make(map[ID]error),
 	}
 }
 
@@ -46,7 +45,7 @@ func (m *mockStore) Insert(_ context.Context, memory Memory) error {
 	return m.insertErr
 }
 
-func (m *mockStore) Get(_ context.Context, id string) (Memory, error) {
+func (m *mockStore) Get(_ context.Context, id ID) (Memory, error) {
 	m.t.Helper()
 
 	if err, ok := m.getErrByID[id]; ok {
@@ -59,9 +58,8 @@ func (m *mockStore) Get(_ context.Context, id string) (Memory, error) {
 	return Memory{}, nil
 }
 
-func (m *mockStore) List(_ context.Context, workspace string, options ...ListOption) ([]Memory, error) {
+func (m *mockStore) List(_ context.Context, workspace string) ([]Memory, error) {
 	m.listWorkspace = workspace
-	m.listIncludeGlobals = NewListOptions(options...).IncludeGlobals
 	return m.listItems, m.listErr
 }
 
@@ -70,8 +68,8 @@ func (m *mockStore) Update(_ context.Context, memory Memory) error {
 	return m.updateErr
 }
 
-func (m *mockStore) Delete(_ context.Context, id string) error {
-	m.deletedIDs = append(m.deletedIDs, id)
+func (m *mockStore) Delete(_ context.Context, id ID) error {
+	m.deletedIDs = append(m.deletedIDs, id.String())
 	return m.deleteErrByID[id]
 }
 
@@ -102,4 +100,14 @@ func mustLoadMemory(t *testing.T, id, content, workspace string, updatedAt time.
 		t.Fatalf("Load: %v", err)
 	}
 	return m
+}
+
+func mustParseID(t *testing.T, value string) ID {
+	t.Helper()
+
+	id, err := ParseID(value)
+	if err != nil {
+		t.Fatalf("ParseID: %v", err)
+	}
+	return id
 }

@@ -3,7 +3,7 @@ package memory
 import "context"
 
 type EditParams struct {
-	ID            string
+	ID            ID
 	Content       *string
 	PromoteGlobal bool
 }

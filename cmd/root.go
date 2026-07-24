@@ -1,16 +1,18 @@
 package cmd
 
 import (
-	"context"
-	"os"
-
+	"github.com/jcyamacho/memo/internal/memory"
 	"github.com/spf13/cobra"
 )
 
-var rootCmd = &cobra.Command{
-	Use:   "memo",
-	Short: "Durable memory for humans and coding agents",
-	Long: `memo stores durable facts, preferences, and project context.
+func New(service *memory.Service) *cobra.Command {
+	root := &cobra.Command{
+		Use:           "memo",
+		Short:         "Durable memory for humans and coding agents",
+		Version:       currentVersion(),
+		SilenceErrors: true,
+		SilenceUsage:  true,
+		Long: `memo stores durable facts, preferences, and project context.
 
 Scope:
   Workspace memories apply to one project. By default, memo resolves the current
@@ -30,19 +32,30 @@ Agent rules:
 Store:
   Set MEMO_CONFIG_DIR to choose the store directory. The default is
   ~/.config/memo.`,
-	Example: `  memo list
+		Example: `  memo list
   memo context
   memo add "prefer small Go interfaces"
   some-command | memo add --global
-  memo edit abc123 --content "corrected memory"
-  memo delete abc123`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		return cmd.Help()
-	},
-}
-
-func Execute(ctx context.Context) {
-	if err := rootCmd.ExecuteContext(ctx); err != nil {
-		os.Exit(1)
+  memo edit 550e8400-e29b-41d4-a716-446655440000 --content "corrected memory"
+  memo delete 550e8400-e29b-41d4-a716-446655440000`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return cmd.Help()
+		},
 	}
+	root.SetVersionTemplate("memo {{.Version}}\n")
+
+	root.AddCommand(
+		newAddCommand(service),
+		newContextCommand(service),
+		newDeleteCommand(service),
+		newEditCommand(service),
+		newGetCommand(service),
+		newHookCommand(),
+		newListCommand(service),
+		newSkillCommand(),
+		newVersionCommand(),
+		newWorkspacesCommand(service),
+	)
+
+	return root
 }

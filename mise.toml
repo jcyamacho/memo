@@ -1,7 +1,7 @@
 [tools]
-go = "latest"
+go = "1.26.4"
 golangci-lint = "2.12.2"
-"aqua:caarlos0/svu" = "latest"
+"aqua:caarlos0/svu" = "3.4.1"
 
 [tasks.test]
 description = "Run Go tests"

@@ -1,17 +1,35 @@
 package memory
 
 import (
+	"errors"
 	"testing"
 	"time"
 
 	"github.com/jcyamacho/memo/internal/pkg/testutil"
 )
 
+func TestMemoryRejectsEmptyContent(t *testing.T) {
+	t.Parallel()
+
+	if _, err := New(" \n\t", "/repo"); !errors.Is(err, ErrInvalidInput) {
+		t.Fatalf("New error = %v, want ErrInvalidInput", err)
+	}
+
+	m, err := Load(testIDOne, "content", "/repo", time.Now())
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if _, err := m.SetContent(" \n\t"); !errors.Is(err, ErrInvalidInput) {
+		t.Fatalf("SetContent error = %v, want ErrInvalidInput", err)
+	}
+	testutil.AssertEqual(t, "content", m.Content())
+}
+
 func TestSetContentTouchesOnlyWhenContentChanges(t *testing.T) {
 	t.Parallel()
 
 	updatedAt := time.Date(2026, 6, 28, 12, 0, 0, 0, time.UTC)
-	m, err := Load("abc123", "old content", "/repo", updatedAt)
+	m, err := Load(testIDOne, "old content", "/repo", updatedAt)
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}
@@ -37,7 +55,7 @@ func TestPromoteToGlobalTouchesOnlyWhenScopeChanges(t *testing.T) {
 	t.Parallel()
 
 	updatedAt := time.Date(2026, 6, 28, 12, 0, 0, 0, time.UTC)
-	m, err := Load("abc123", "content", "/repo", updatedAt)
+	m, err := Load(testIDOne, "content", "/repo", updatedAt)
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}

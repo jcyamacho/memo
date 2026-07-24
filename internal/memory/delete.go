@@ -14,13 +14,14 @@ const (
 
 type DeleteOutcome struct {
 	Deleted bool
-	ID      string
+	ID      ID
 	Code    DeleteCode
 }
 
-func (s *Service) Delete(ctx context.Context, ids []string) ([]DeleteOutcome, error) {
-	seen := make(map[string]struct{}, len(ids))
+func (s *Service) Delete(ctx context.Context, ids []ID) ([]DeleteOutcome, error) {
+	seen := make(map[ID]struct{}, len(ids))
 	outcomes := make([]DeleteOutcome, 0, len(ids))
+	var deleteErr error
 	for _, id := range ids {
 		if _, ok := seen[id]; ok {
 			continue
@@ -35,7 +36,10 @@ func (s *Service) Delete(ctx context.Context, ids []string) ([]DeleteOutcome, er
 			outcomes = append(outcomes, DeleteOutcome{Deleted: false, ID: id, Code: DeleteCodeNotFound})
 		default:
 			outcomes = append(outcomes, DeleteOutcome{Deleted: false, ID: id, Code: DeleteCodeInternalError})
+			if deleteErr == nil {
+				deleteErr = err
+			}
 		}
 	}
-	return outcomes, nil
+	return outcomes, deleteErr
 }

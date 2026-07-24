@@ -54,7 +54,7 @@ func (s *FS) Insert(_ context.Context, m memory.Memory) error {
 	return writeMemoryFile(path, m.Content(), m.UpdatedAt())
 }
 
-func (s *FS) Get(_ context.Context, id string) (memory.Memory, error) {
+func (s *FS) Get(_ context.Context, id memory.ID) (memory.Memory, error) {
 	located, err := s.findMemoryFile(id)
 	if err != nil {
 		return memory.Memory{}, err
@@ -62,15 +62,15 @@ func (s *FS) Get(_ context.Context, id string) (memory.Memory, error) {
 	if located == nil {
 		return memory.Memory{}, memory.ErrNotFound
 	}
+
 	return s.readRecord(located.path, located.workspace)
 }
 
-func (s *FS) List(_ context.Context, workspace string, options ...memory.ListOption) ([]memory.Memory, error) {
-	targets, err := s.resolveListTargets(workspace, memory.NewListOptions(options...))
-	if err != nil {
-		return nil, err
+func (s *FS) List(_ context.Context, workspace string) ([]memory.Memory, error) {
+	targets := []memoryTarget{
+		{path: s.globalsDir},
+		{path: s.workspaceDirectory(workspace), workspace: workspace},
 	}
-
 	var items []memory.Memory
 	for _, target := range targets {
 		records, err := s.readDirectoryRecords(target.path, target.workspace)
@@ -106,7 +106,7 @@ func (s *FS) Update(ctx context.Context, m memory.Memory) error {
 	return nil
 }
 
-func (s *FS) Delete(_ context.Context, id string) error {
+func (s *FS) Delete(_ context.Context, id memory.ID) error {
 	located, err := s.findMemoryFile(id)
 	if err != nil {
 		return err
@@ -153,36 +153,6 @@ type memoryTarget struct {
 	workspace string
 }
 
-type listTarget struct {
-	path      string
-	workspace string
-}
-
-func (s *FS) resolveListTargets(workspace string, options memory.ListOptions) ([]listTarget, error) {
-	var targets []listTarget
-
-	if options.IncludeGlobals {
-		targets = append(targets, listTarget{path: s.globalsDir})
-	}
-
-	if workspace != "" {
-		targets = append(targets, listTarget{
-			path:      s.workspaceDirectory(workspace),
-			workspace: workspace,
-		})
-	} else {
-		workspaceTargets, err := s.listWorkspaceTargets()
-		if err != nil {
-			return nil, err
-		}
-		for _, target := range workspaceTargets {
-			targets = append(targets, listTarget(target))
-		}
-	}
-
-	return targets, nil
-}
-
 func (s *FS) readDirectoryRecords(dirPath, workspace string) ([]memory.Memory, error) {
 	entries, err := os.ReadDir(dirPath)
 	if err != nil {
@@ -206,7 +176,7 @@ func (s *FS) readDirectoryRecords(dirPath, workspace string) ([]memory.Memory, e
 	return records, nil
 }
 
-func (s *FS) findMemoryFile(id string) (*memoryTarget, error) {
+func (s *FS) findMemoryFile(id memory.ID) (*memoryTarget, error) {
 	globalPath := s.memoryPath(id, "")
 
 	_, err := os.Stat(globalPath)
@@ -222,7 +192,7 @@ func (s *FS) findMemoryFile(id string) (*memoryTarget, error) {
 		return nil, err
 	}
 	for _, target := range workspaceTargets {
-		filePath := filepath.Join(target.path, id+markdownExt)
+		filePath := filepath.Join(target.path, id.String()+markdownExt)
 
 		_, err := os.Stat(filePath)
 		if err == nil {
@@ -282,11 +252,11 @@ func (s *FS) readRecord(path, workspace string) (memory.Memory, error) {
 	return record, nil
 }
 
-func (s *FS) memoryPath(id, workspace string) string {
+func (s *FS) memoryPath(id memory.ID, workspace string) string {
 	if workspace == "" {
-		return filepath.Join(s.globalsDir, id+markdownExt)
+		return filepath.Join(s.globalsDir, id.String()+markdownExt)
 	}
-	return filepath.Join(s.workspaceDirectory(workspace), id+markdownExt)
+	return filepath.Join(s.workspaceDirectory(workspace), id.String()+markdownExt)
 }
 
 func (s *FS) workspaceDirectory(workspace string) string {

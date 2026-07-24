@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"log"
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -15,20 +15,26 @@ import (
 )
 
 func main() {
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	if err := run(ctx); err != nil {
+		fmt.Fprintf(os.Stderr, "memo: %v\n", err)
+		os.Exit(1)
+	}
+}
+
+func run(ctx context.Context) error {
 	dir, err := config.Dir()
 	if err != nil {
-		log.Fatalf("resolve config directory: %v", err)
+		return fmt.Errorf("resolve config directory: %w", err)
 	}
 
 	store, err := fsstore.New(dir)
 	if err != nil {
-		log.Fatalf("open memory store: %v", err)
+		return fmt.Errorf("open memory store: %w", err)
 	}
-	cmd.SetService(memory.NewService(store, workspace.GitResolver{}))
 
-	ctx := context.Background()
-	ctx, stop := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
-	defer stop()
-
-	cmd.Execute(ctx)
+	service := memory.NewService(store, workspace.GitResolver{})
+	return cmd.New(service).ExecuteContext(ctx)
 }

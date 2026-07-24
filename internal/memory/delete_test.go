@@ -14,19 +14,27 @@ func TestServiceDeleteDeduplicatesAndClassifiesOutcomes(t *testing.T) {
 	service := NewService(store, nil)
 	errInternal := errors.New("store failed")
 
-	store.deleteErrByID["missing"] = ErrNotFound
-	store.deleteErrByID["failed"] = errInternal
+	missingID := mustParseID(t, testIDTwo)
+	failedID := mustParseID(t, testIDThree)
+	store.deleteErrByID[missingID] = ErrNotFound
+	store.deleteErrByID[failedID] = errInternal
 
-	got, err := service.Delete(t.Context(), []string{"ok", "missing", "ok", "failed"})
-	if err != nil {
-		t.Fatalf("Delete: %v", err)
+	okID := mustParseID(t, testIDOne)
+	got, err := service.Delete(t.Context(), []ID{okID, missingID, okID, failedID})
+	if !errors.Is(err, errInternal) {
+		t.Fatalf("Delete error = %v, want store error", err)
 	}
-
-	want := []DeleteOutcome{
-		{Deleted: true, ID: "ok"},
-		{ID: "missing", Code: DeleteCodeNotFound},
-		{ID: "failed", Code: DeleteCodeInternalError},
+	if len(got) != 3 {
+		t.Fatalf("Delete outcomes = %d, want 3", len(got))
 	}
-	testutil.AssertEqual(t, want, got)
-	testutil.AssertEqual(t, []string{"ok", "missing", "failed"}, store.deletedIDs)
+	if !got[0].Deleted || got[0].ID != okID {
+		t.Fatalf("successful outcome = %#v", got[0])
+	}
+	if got[1].ID != missingID || got[1].Code != DeleteCodeNotFound {
+		t.Fatalf("missing outcome = %#v", got[1])
+	}
+	if got[2].ID != failedID || got[2].Code != DeleteCodeInternalError {
+		t.Fatalf("failed outcome = %#v", got[2])
+	}
+	testutil.AssertEqual(t, []string{testIDOne, testIDTwo, testIDThree}, store.deletedIDs)
 }

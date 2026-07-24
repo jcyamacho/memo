@@ -7,37 +7,42 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var listWorkspace string
+func newListCommand(service *memory.Service) *cobra.Command {
+	var workspace string
 
-func init() {
-	listCmd.Flags().StringVar(&listWorkspace, "workspace", "", "workspace path (default: cwd)")
-	rootCmd.AddCommand(listCmd)
-}
-
-var listCmd = &cobra.Command{
-	Use:     "list",
-	Aliases: []string{"ls"},
-	Short:   "List memories for a workspace",
-	Long: `List workspace-scoped and global memories, newest first.
+	command := &cobra.Command{
+		Use:     "list",
+		Aliases: []string{"ls"},
+		Short:   "List memories for a workspace",
+		Long: `List workspace-scoped and global memories, newest first.
 
 By default, the workspace is the current directory resolved to the Git repository
 root when possible. The result includes memories for that workspace plus global
 memories. The command returns the full result set with no pagination as XML.`,
-	Example: `  memo list
+		Example: `  memo list
   memo ls
   memo list --workspace /path/to/project`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		workspacePath, err := resolveWorkspacePath(listWorkspace)
-		if err != nil {
-			return err
-		}
+		Args: cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			workspacePath, err := resolveWorkspacePath(workspace)
+			if err != nil {
+				return err
+			}
+			result, err := service.List(cmd.Context(), workspacePath)
+			if err != nil {
+				return err
+			}
 
-		items, err := service.List(cmd.Context(), workspacePath)
-		if err != nil {
-			return err
-		}
-		return printOutput(memoriesXMLOutput(workspacePath, items))
-	},
+			output, err := memoriesXMLOutput(result.Workspace, result.Items)
+			if err != nil {
+				return err
+			}
+			return printOutput(cmd, output)
+		},
+	}
+	command.Flags().StringVar(&workspace, "workspace", "", "workspace path (default: cwd)")
+
+	return command
 }
 
 type memoriesXML struct {

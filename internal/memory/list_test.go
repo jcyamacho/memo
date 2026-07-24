@@ -7,7 +7,7 @@ import (
 	"github.com/jcyamacho/memo/internal/pkg/testutil"
 )
 
-func TestServiceListSortsAndMapsResolvedWorkspace(t *testing.T) {
+func TestServiceListSortsAndReturnsResolvedWorkspace(t *testing.T) {
 	t.Parallel()
 
 	older := time.Date(2026, 7, 4, 10, 0, 0, 0, time.UTC)
@@ -17,23 +17,39 @@ func TestServiceListSortsAndMapsResolvedWorkspace(t *testing.T) {
 	service := NewService(store, resolver)
 
 	store.listItems = []Memory{
-		mustLoadMemory(t, "workspace-b", "workspace b", "/resolved/repo", older),
-		mustLoadMemory(t, "global", "global", "", newer),
-		mustLoadMemory(t, "workspace-a", "workspace a", "/resolved/repo", older),
+		mustLoadMemory(t, testIDTwo, "workspace b", "/resolved/repo", older),
+		mustLoadMemory(t, testIDThree, "global", "", newer),
+		mustLoadMemory(t, testIDOne, "workspace a", "/resolved/repo", older),
 	}
 
-	got, err := service.List(t.Context(), ".")
+	result, err := service.List(t.Context(), ".")
 	if err != nil {
 		t.Fatalf("List: %v", err)
 	}
+	testutil.AssertEqual(t, "/resolved/repo", result.Workspace)
 
-	want := []MemoryDTO{
-		{ID: "global", Content: "global", UpdatedAt: newer},
-		{ID: "workspace-a", Content: "workspace a", Workspace: ".", UpdatedAt: older},
-		{ID: "workspace-b", Content: "workspace b", Workspace: ".", UpdatedAt: older},
+	type comparableMemoryDTO struct {
+		ID        string
+		Content   string
+		Workspace string
+		UpdatedAt time.Time
 	}
-	testutil.AssertEqual(t, want, got)
+
+	comparable := make([]comparableMemoryDTO, 0, len(result.Items))
+	for _, item := range result.Items {
+		comparable = append(comparable, comparableMemoryDTO{
+			ID:        item.ID.String(),
+			Content:   item.Content,
+			Workspace: item.Workspace,
+			UpdatedAt: item.UpdatedAt,
+		})
+	}
+	want := []comparableMemoryDTO{
+		{ID: testIDThree, Content: "global", UpdatedAt: newer},
+		{ID: testIDOne, Content: "workspace a", Workspace: "/resolved/repo", UpdatedAt: older},
+		{ID: testIDTwo, Content: "workspace b", Workspace: "/resolved/repo", UpdatedAt: older},
+	}
+	testutil.AssertEqual(t, want, comparable)
 	testutil.AssertEqual(t, []string{"."}, resolver.paths)
 	testutil.AssertEqual(t, "/resolved/repo", store.listWorkspace)
-	testutil.AssertEqual(t, true, store.listIncludeGlobals)
 }

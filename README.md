@@ -47,6 +47,9 @@ memo context
 `memo context` loads workspace and global memories, then tells the agent to use
 `memo skill` before adding, editing, or deleting memories.
 
+After configuring Codex, open `/hooks` once to review and trust the hook. Codex
+does not run new or changed non-managed hooks until they are trusted.
+
 Codex configures `~/.codex/hooks.json` with:
 
 ```json
@@ -79,7 +82,9 @@ Claude Code configures `~/.claude/settings.json` with:
         "hooks": [
           {
             "type": "command",
-            "command": "memo context"
+            "command": "memo context",
+            "statusMessage": "Loading memories",
+            "timeout": 5
           }
         ]
       }
@@ -141,7 +146,7 @@ commands are mainly for agents and for manual memory maintenance.
 | Promote to global | `memo edit <id> --global` |
 | Delete memories | `memo delete <id> [id...]` |
 | List known workspaces | `memo workspaces` |
-| Print release version | `memo version` |
+| Print release version | `memo version` or `memo --version` |
 
 Run `memo skill` to inspect the operating guide that agents should follow when
 maintaining memories.
@@ -161,13 +166,17 @@ Example memory:
 ```
 
 `memo list` prints a `<memories>` wrapper with `<memory>` children.
+Memory IDs are non-null UUIDs. Their version is not part of the domain contract;
+commands normalize valid textual representations.
 
 `memo context` prints a `<memo_context>` wrapper with short instructions and
 the current workspace plus global memories. It is intended for session-start
 hooks in coding-agent harnesses.
 
 `memo delete` prints `<delete_results>` with ordered `<deleted>` and `<failure>`
-children.
+children. It still prints the complete XML result when an item fails, then exits
+with a non-zero status. Filesystem failures also retain their diagnostic cause
+on stderr.
 
 `memo workspaces` prints plain text paths, one per line.
 
@@ -205,7 +214,7 @@ git push origin v0.1.0
 ```
 
 The release workflow runs the full check suite, builds binaries with
-GoReleaser, publishes a GitHub Release, and updates the `memo` cask in
+GoReleaser, publishes a GitHub Release, and updates the `memo` formula in
 `jcyamacho/homebrew-tap`.
 
 The repository must have a `TAP_GITHUB_TOKEN` secret with write access to

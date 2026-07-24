@@ -94,9 +94,12 @@ Examples:
 
 - `memo add`, `memo get`, `memo list`, `memo edit`, and `memo delete` print XML.
 - `memo list` prints `<memories>` with `<memory>` children.
+- Memory IDs are non-null UUIDs; their version is not part of the contract.
 - Memory elements include `id` and `updated_at`. Global memories include
   `global="true"`. Memories from another workspace include `workspace="..."`.
 - `memo delete` prints `<delete_results>` with `<deleted>` and `<failure>`.
+- `memo delete` exits non-zero when any requested deletion fails, after printing
+  the complete XML result.
 - `memo workspaces` prints plain text paths, one per line.
 
 Set `MEMO_CONFIG_DIR` to choose the store directory. The default is

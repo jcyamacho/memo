@@ -16,11 +16,11 @@ func TestServiceEditUpdatesChangedMemory(t *testing.T) {
 	service := NewService(store, nil)
 	content := "new content"
 
-	original := mustLoadMemory(t, "abc123", "old content", "/repo", updatedAt)
-	store.getByID["abc123"] = original
+	original := mustLoadMemory(t, testIDOne, "old content", "/repo", updatedAt)
+	store.getByID[original.ID()] = original
 
 	got, err := service.Edit(t.Context(), EditParams{
-		ID:            "abc123",
+		ID:            original.ID(),
 		Content:       &content,
 		PromoteGlobal: true,
 	})
@@ -29,13 +29,13 @@ func TestServiceEditUpdatesChangedMemory(t *testing.T) {
 	}
 
 	testutil.AssertEqual(t, 1, len(store.updated))
-	testutil.AssertEqual(t, "abc123", store.updated[0].ID())
+	testutil.AssertEqual(t, original.ID().String(), store.updated[0].ID().String())
 	testutil.AssertEqual(t, "new content", store.updated[0].Content())
 	testutil.AssertEqual(t, "", store.updated[0].Workspace())
 	if !store.updated[0].UpdatedAt().After(updatedAt) {
 		t.Fatalf("UpdatedAt = %s, want after %s", store.updated[0].UpdatedAt(), updatedAt)
 	}
-	testutil.AssertEqual(t, "abc123", got.ID)
+	testutil.AssertEqual(t, original.ID().String(), got.ID.String())
 	testutil.AssertEqual(t, "new content", got.Content)
 	testutil.AssertEqual(t, "", got.Workspace)
 	if !got.UpdatedAt.After(updatedAt) {
@@ -50,11 +50,11 @@ func TestServiceEditRejectsNoop(t *testing.T) {
 	service := NewService(store, nil)
 	content := "content"
 
-	original := mustLoadMemory(t, "abc123", "content", "", time.Date(2026, 7, 4, 10, 0, 0, 0, time.UTC))
-	store.getByID["abc123"] = original
+	original := mustLoadMemory(t, testIDOne, "content", "", time.Date(2026, 7, 4, 10, 0, 0, 0, time.UTC))
+	store.getByID[original.ID()] = original
 
 	_, err := service.Edit(t.Context(), EditParams{
-		ID:            "abc123",
+		ID:            original.ID(),
 		Content:       &content,
 		PromoteGlobal: true,
 	})

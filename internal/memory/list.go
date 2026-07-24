@@ -2,34 +2,37 @@ package memory
 
 import (
 	"context"
-	"sort"
+	"slices"
+	"strings"
 )
 
-func (s *Service) List(ctx context.Context, queryWorkspace string) ([]MemoryDTO, error) {
+type ListResult struct {
+	Workspace string
+	Items     []MemoryDTO
+}
+
+func (s *Service) List(ctx context.Context, queryWorkspace string) (ListResult, error) {
 	resolved, err := s.workspaceResolver.Resolve(ctx, queryWorkspace)
 	if err != nil {
-		return nil, err
+		return ListResult{}, err
 	}
 
-	items, err := s.store.List(ctx, resolved, WithGlobals())
+	items, err := s.store.List(ctx, resolved)
 	if err != nil {
-		return nil, err
+		return ListResult{}, err
 	}
 
-	sort.Slice(items, func(i, j int) bool {
-		if items[i].UpdatedAt().Equal(items[j].UpdatedAt()) {
-			return items[i].ID() < items[j].ID()
+	slices.SortFunc(items, func(a, b Memory) int {
+		if order := b.UpdatedAt().Compare(a.UpdatedAt()); order != 0 {
+			return order
 		}
-		return items[i].UpdatedAt().After(items[j].UpdatedAt())
+		return strings.Compare(a.ID().String(), b.ID().String())
 	})
 
 	results := make([]MemoryDTO, 0, len(items))
 	for i := range items {
-		item := items[i].DTO()
-		if item.Workspace == resolved {
-			item.Workspace = queryWorkspace
-		}
-		results = append(results, item)
+		results = append(results, items[i].DTO())
 	}
-	return results, nil
+
+	return ListResult{Workspace: resolved, Items: results}, nil
 }

@@ -5,8 +5,11 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/jcyamacho/memo/internal/hookconfig"
 	"github.com/jcyamacho/memo/internal/pkg/jsonutil"
 )
+
+const memoContextCommand = "memo context"
 
 func DefaultHookPath() (string, error) {
 	home, err := os.UserHomeDir()
@@ -29,12 +32,19 @@ func ConfigureHook() (string, error) {
 }
 
 func configureHookAt(path string) error {
-	config, err := jsonutil.Read[config](path)
+	config, err := jsonutil.Read[hookconfig.Config](path)
 	if err != nil {
 		return fmt.Errorf("read Codex hook config: %w", err)
 	}
 
-	config.configureSessionStartHook()
+	if err := config.ConfigureSessionStart(hookconfig.SessionStartHook{
+		Matcher:       "startup|resume|clear|compact",
+		Command:       memoContextCommand,
+		StatusMessage: "Loading memories",
+		Timeout:       5,
+	}); err != nil {
+		return fmt.Errorf("configure Codex hook: %w", err)
+	}
 	if err := jsonutil.Write(path, config); err != nil {
 		return fmt.Errorf("write Codex hook config: %w", err)
 	}

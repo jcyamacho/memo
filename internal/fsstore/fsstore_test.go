@@ -1,7 +1,6 @@
 package fsstore
 
 import (
-	"context"
 	"errors"
 	"net/url"
 	"os"
@@ -15,28 +14,13 @@ func TestFSRoundTrip(t *testing.T) {
 	t.Parallel()
 
 	dir := t.TempDir()
-	store, err := New(dir)
-	if err != nil {
-		t.Fatalf("New: %v", err)
-	}
-
-	ctx := context.Background()
+	store := newStoreAt(t, dir)
+	ctx := t.Context()
 	workspace := "/repo/project"
-	m, err := memory.New("workspace memory", workspace)
-	if err != nil {
-		t.Fatalf("memory.New: %v", err)
-	}
-	if err := store.Insert(ctx, m); err != nil {
-		t.Fatalf("Insert: %v", err)
-	}
-
-	global, err := memory.New("global memory", "")
-	if err != nil {
-		t.Fatalf("memory.New global: %v", err)
-	}
-	if err := store.Insert(ctx, global); err != nil {
-		t.Fatalf("Insert global: %v", err)
-	}
+	m := mustMemory(t, "workspace memory", workspace)
+	mustInsert(t, store, m)
+	global := mustMemory(t, "global memory", "")
+	mustInsert(t, store, global)
 
 	got, err := store.Get(ctx, m.ID())
 	if err != nil {
@@ -46,7 +30,7 @@ func TestFSRoundTrip(t *testing.T) {
 		t.Fatalf("Get returned %+v, want content %q workspace %q", got, m.Content(), workspace)
 	}
 
-	items, err := store.List(ctx, workspace, memory.WithGlobals())
+	items, err := store.List(ctx, workspace)
 	if err != nil {
 		t.Fatalf("List: %v", err)
 	}
@@ -72,7 +56,11 @@ func TestFSRoundTrip(t *testing.T) {
 	if err := store.Delete(ctx, m.ID()); err != nil {
 		t.Fatalf("Delete workspace memory: %v", err)
 	}
-	if err := store.Delete(ctx, "missing"); !errors.Is(err, memory.ErrNotFound) {
+	missingID, err := memory.ParseID("550e8400-e29b-41d4-a716-446655440099")
+	if err != nil {
+		t.Fatalf("ParseID missing: %v", err)
+	}
+	if err := store.Delete(ctx, missingID); !errors.Is(err, memory.ErrNotFound) {
 		t.Fatalf("Delete missing = %v, want ErrNotFound", err)
 	}
 	if err := store.Delete(ctx, global.ID()); err != nil {
@@ -97,20 +85,10 @@ func TestFSWorkspacePathWithSeparators(t *testing.T) {
 	t.Parallel()
 
 	dir := t.TempDir()
-	store, err := New(dir)
-	if err != nil {
-		t.Fatalf("New: %v", err)
-	}
-
-	ctx := context.Background()
+	store := newStoreAt(t, dir)
+	ctx := t.Context()
 	workspace := "/repo/feature branch\\nested"
-	m, err := memory.New("workspace memory", workspace)
-	if err != nil {
-		t.Fatalf("memory.New: %v", err)
-	}
-	if err := store.Insert(ctx, m); err != nil {
-		t.Fatalf("Insert: %v", err)
-	}
+	mustInsert(t, store, mustMemory(t, "workspace memory", workspace))
 
 	encoded := url.PathEscape(workspace)
 	if encoded == workspace {
@@ -137,101 +115,99 @@ func TestFSWorkspacePathWithSeparators(t *testing.T) {
 	}
 }
 
-func TestFSListTargets(t *testing.T) {
+func TestFSListIncludesWorkspaceAndGlobals(t *testing.T) {
 	t.Parallel()
 
-	dir := t.TempDir()
-	store, err := New(dir)
+	store := newStore(t)
+	ctx := t.Context()
+	mustInsert(t, store, mustMemory(t, "global", ""))
+	mustInsert(t, store, mustMemory(t, "workspace one", "/repo/one"))
+	mustInsert(t, store, mustMemory(t, "workspace two", "/repo/two"))
+
+	items, err := store.List(ctx, "/repo/one")
 	if err != nil {
-		t.Fatalf("New: %v", err)
+		t.Fatalf("List: %v", err)
 	}
 
-	ctx := context.Background()
-	insertMemory := func(content, workspace string) {
-		t.Helper()
-
-		m, err := memory.New(content, workspace)
-		if err != nil {
-			t.Fatalf("memory.New: %v", err)
+	got := make(map[string]struct{}, len(items))
+	for _, item := range items {
+		got[item.Content()] = struct{}{}
+	}
+	want := []string{"global", "workspace one"}
+	if len(got) != len(want) {
+		t.Fatalf("got contents %v, want %v", got, want)
+	}
+	for _, content := range want {
+		if _, ok := got[content]; !ok {
+			t.Fatalf("missing content %q in %v", content, got)
 		}
-		if err := store.Insert(ctx, m); err != nil {
-			t.Fatalf("Insert: %v", err)
-		}
-	}
-
-	insertMemory("global", "")
-	insertMemory("workspace one", "/repo/one")
-	insertMemory("workspace two", "/repo/two")
-
-	tests := []struct {
-		name      string
-		workspace string
-		options   []memory.ListOption
-		contents  []string
-	}{
-		{
-			name:     "all workspaces",
-			contents: []string{"workspace one", "workspace two"},
-		},
-		{
-			name:     "all workspaces with globals",
-			options:  []memory.ListOption{memory.WithGlobals()},
-			contents: []string{"global", "workspace one", "workspace two"},
-		},
-		{
-			name:      "one workspace",
-			workspace: "/repo/one",
-			contents:  []string{"workspace one"},
-		},
-		{
-			name:      "one workspace with globals",
-			workspace: "/repo/one",
-			options:   []memory.ListOption{memory.WithGlobals()},
-			contents:  []string{"global", "workspace one"},
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			items, err := store.List(ctx, test.workspace, test.options...)
-			if err != nil {
-				t.Fatalf("List: %v", err)
-			}
-
-			got := make(map[string]struct{}, len(items))
-			for _, item := range items {
-				got[item.Content()] = struct{}{}
-			}
-			if len(got) != len(test.contents) {
-				t.Fatalf("got contents %v, want %v", got, test.contents)
-			}
-			for _, content := range test.contents {
-				if _, ok := got[content]; !ok {
-					t.Fatalf("missing content %q in %v", content, got)
-				}
-			}
-		})
 	}
 }
 
 func TestFSInsertDuplicate(t *testing.T) {
 	t.Parallel()
 
-	dir := t.TempDir()
+	store := newStore(t)
+	ctx := t.Context()
+	m := mustMemory(t, "content", "")
+	mustInsert(t, store, m)
+	if err := store.Insert(ctx, m); !errors.Is(err, memory.ErrExists) {
+		t.Fatalf("Insert duplicate = %v, want ErrExists", err)
+	}
+}
+
+func TestFSUpdatePromotesWithoutLeavingDuplicate(t *testing.T) {
+	t.Parallel()
+
+	store := newStore(t)
+	m := mustMemory(t, "workspace memory", "/repo/project")
+	mustInsert(t, store, m)
+
+	m.PromoteToGlobal()
+	if err := store.Update(t.Context(), m); err != nil {
+		t.Fatalf("Update: %v", err)
+	}
+
+	globalPath := store.memoryPath(m.ID(), "")
+	workspacePath := store.memoryPath(m.ID(), "/repo/project")
+	if _, err := os.Stat(globalPath); err != nil {
+		t.Fatalf("stat global memory: %v", err)
+	}
+	if _, err := os.Stat(workspacePath); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("workspace memory still exists: %v", err)
+	}
+}
+
+func newStore(t *testing.T) *FS {
+	t.Helper()
+
+	return newStoreAt(t, t.TempDir())
+}
+
+func newStoreAt(t *testing.T, dir string) *FS {
+	t.Helper()
+
 	store, err := New(dir)
 	if err != nil {
 		t.Fatalf("New: %v", err)
 	}
+	return store
+}
 
-	ctx := context.Background()
-	m, err := memory.New("content", "")
+func mustMemory(t *testing.T, content, workspace string) memory.Memory {
+	t.Helper()
+
+	m, err := memory.New(content, workspace)
 	if err != nil {
 		t.Fatalf("memory.New: %v", err)
 	}
-	if err := store.Insert(ctx, m); err != nil {
+	return m
+}
+
+func mustInsert(t *testing.T, store *FS, m memory.Memory) {
+	t.Helper()
+
+	if err := store.Insert(t.Context(), m); err != nil {
 		t.Fatalf("Insert: %v", err)
-	}
-	if err := store.Insert(ctx, m); !errors.Is(err, memory.ErrExists) {
-		t.Fatalf("Insert duplicate = %v, want ErrExists", err)
 	}
 }

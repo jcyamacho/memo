@@ -8,6 +8,11 @@ import (
 	"github.com/jcyamacho/memo/internal/memory"
 )
 
+const (
+	testMemoryIDOne = "550e8400-e29b-41d4-a716-446655440000"
+	testMemoryIDTwo = "550e8400-e29b-41d4-a716-446655440001"
+)
+
 func TestMemoriesXMLEmpty(t *testing.T) {
 	t.Parallel()
 
@@ -25,7 +30,7 @@ func TestMemoryXMLGlobal(t *testing.T) {
 	t.Parallel()
 
 	m, err := memory.Load(
-		"abc123",
+		testMemoryIDOne,
 		"hello & world",
 		"",
 		time.Date(2026, 3, 1, 12, 0, 0, 0, time.UTC),
@@ -50,11 +55,11 @@ func TestContextXML(t *testing.T) {
 	t.Parallel()
 
 	updatedAt := time.Date(2026, 3, 1, 12, 0, 0, 0, time.UTC)
-	workspaceMemory, err := memory.Load("workspace-id", "workspace fact", "/repo", updatedAt)
+	workspaceMemory, err := memory.Load(testMemoryIDOne, "workspace fact", "/repo", updatedAt)
 	if err != nil {
 		t.Fatalf("memory.Load workspace: %v", err)
 	}
-	globalMemory, err := memory.Load("global-id", "global fact", "", updatedAt)
+	globalMemory, err := memory.Load(testMemoryIDTwo, "global fact", "", updatedAt)
 	if err != nil {
 		t.Fatalf("memory.Load global: %v", err)
 	}
@@ -82,10 +87,10 @@ func TestContextXML(t *testing.T) {
 	if count := strings.Count(got, `workspace="/repo"`); count != 1 {
 		t.Fatalf("workspace attribute count = %d, want 1: %s", count, got)
 	}
-	if !strings.Contains(got, `<memory id="workspace-id" updated_at="2026-03-01T12:00:00.000Z">workspace fact</memory>`) {
+	if !strings.Contains(got, `<memory id="550e8400-e29b-41d4-a716-446655440000" updated_at="2026-03-01T12:00:00.000Z">workspace fact</memory>`) {
 		t.Fatalf("missing workspace memory: %s", got)
 	}
-	if !strings.Contains(got, `<memory id="global-id" updated_at="2026-03-01T12:00:00.000Z" global="true">global fact</memory>`) {
+	if !strings.Contains(got, `<memory id="550e8400-e29b-41d4-a716-446655440001" updated_at="2026-03-01T12:00:00.000Z" global="true">global fact</memory>`) {
 		t.Fatalf("missing global memory: %s", got)
 	}
 }
@@ -93,9 +98,18 @@ func TestContextXML(t *testing.T) {
 func TestDeleteResultsXML(t *testing.T) {
 	t.Parallel()
 
+	deletedID, err := memory.ParseID(testMemoryIDOne)
+	if err != nil {
+		t.Fatalf("ParseID deleted: %v", err)
+	}
+	missingID, err := memory.ParseID(testMemoryIDTwo)
+	if err != nil {
+		t.Fatalf("ParseID missing: %v", err)
+	}
+
 	outcomes := []memory.DeleteOutcome{
-		{Deleted: true, ID: "a"},
-		{Deleted: false, ID: "b", Code: memory.DeleteCodeNotFound},
+		{Deleted: true, ID: deletedID},
+		{Deleted: false, ID: missingID, Code: memory.DeleteCodeNotFound},
 	}
 
 	got, err := deleteResultsXMLOutput(outcomes)
@@ -105,10 +119,10 @@ func TestDeleteResultsXML(t *testing.T) {
 	if !strings.Contains(got, `<delete_results deleted="1" failed="1">`) {
 		t.Fatalf("unexpected wrapper: %s", got)
 	}
-	if !strings.Contains(got, `<deleted id="a">`) {
+	if !strings.Contains(got, `<deleted id="550e8400-e29b-41d4-a716-446655440000">`) {
 		t.Fatalf("missing deleted id: %s", got)
 	}
-	if !strings.Contains(got, `<failure id="b" status="not_found">`) {
+	if !strings.Contains(got, `<failure id="550e8400-e29b-41d4-a716-446655440001" status="not_found">`) {
 		t.Fatalf("missing failure: %s", got)
 	}
 }

@@ -4,51 +4,54 @@ import (
 	"fmt"
 	"strings"
 	"time"
-
-	"github.com/google/uuid"
 )
 
 type Memory struct {
-	id        string
+	id        ID
 	content   string
 	workspace string
 	updatedAt time.Time
 }
 
 func New(content, workspace string) (Memory, error) {
-	trimmed := strings.TrimSpace(content)
-	if trimmed == "" {
-		return Memory{}, ErrInvalidInput
+	normalized, err := normalizeContent(content)
+	if err != nil {
+		return Memory{}, err
 	}
 
-	id, err := newID()
+	id, err := NewID()
 	if err != nil {
 		return Memory{}, fmt.Errorf("generate memory id: %w", err)
 	}
 
 	return Memory{
 		id:        id,
-		content:   trimmed,
+		content:   normalized,
 		workspace: workspace,
 		updatedAt: time.Now().UTC(),
 	}, nil
 }
 
 func Load(id, content, workspace string, updatedAt time.Time) (Memory, error) {
-	trimmed := strings.TrimSpace(content)
-	if trimmed == "" {
-		return Memory{}, ErrInvalidInput
+	parsedID, err := ParseID(id)
+	if err != nil {
+		return Memory{}, err
+	}
+
+	normalized, err := normalizeContent(content)
+	if err != nil {
+		return Memory{}, err
 	}
 	return Memory{
-		id:        id,
-		content:   trimmed,
+		id:        parsedID,
+		content:   normalized,
 		workspace: workspace,
 		updatedAt: updatedAt.UTC(),
 	}, nil
 }
 
 type MemoryDTO struct {
-	ID        string
+	ID        ID
 	Content   string
 	Workspace string
 	UpdatedAt time.Time
@@ -67,7 +70,7 @@ func (m MemoryDTO) IsGlobal() bool {
 	return m.Workspace == ""
 }
 
-func (m *Memory) ID() string {
+func (m *Memory) ID() ID {
 	return m.id
 }
 
@@ -84,14 +87,14 @@ func (m *Memory) UpdatedAt() time.Time {
 }
 
 func (m *Memory) SetContent(content string) (bool, error) {
-	trimmed := strings.TrimSpace(content)
-	if trimmed == "" {
-		return false, ErrInvalidInput
+	normalized, err := normalizeContent(content)
+	if err != nil {
+		return false, err
 	}
-	if m.content == trimmed {
+	if m.content == normalized {
 		return false, nil
 	}
-	m.content = trimmed
+	m.content = normalized
 	m.touch()
 	return true, nil
 }
@@ -113,10 +116,11 @@ func (m *Memory) touch() {
 	m.updatedAt = time.Now().UTC()
 }
 
-func newID() (string, error) {
-	id, err := uuid.NewRandom()
-	if err != nil {
-		return "", err
+func normalizeContent(content string) (string, error) {
+	normalized := strings.TrimSpace(content)
+	if normalized == "" {
+		return "", ErrInvalidInput
 	}
-	return id.String(), nil
+
+	return normalized, nil
 }

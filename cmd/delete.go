@@ -2,33 +2,57 @@ package cmd
 
 import (
 	"encoding/xml"
+	"errors"
 
 	"github.com/jcyamacho/memo/internal/memory"
 	"github.com/spf13/cobra"
 )
 
-func init() {
-	rootCmd.AddCommand(deleteCmd)
-}
+var errDeleteIncomplete = errors.New("one or more memories could not be deleted")
 
-var deleteCmd = &cobra.Command{
-	Use:     "delete <id> [id...]",
-	Aliases: []string{"remove", "rm"},
-	Short:   "Delete one or more memories",
-	Long: `Delete memories confirmed obsolete or incorrect.
+func newDeleteCommand(service *memory.Service) *cobra.Command {
+	return &cobra.Command{
+		Use:     "delete <id> [id...]",
+		Aliases: []string{"remove", "rm"},
+		Short:   "Delete one or more memories",
+		Long: `Delete memories confirmed obsolete or incorrect by UUID.
 
 Accepts 1 to 50 memory ids. Duplicate ids are ignored. The command prints XML
-with one result per requested id that remains after deduplication.`,
-	Example: `  memo delete abc123
-  memo delete abc123 def456 missing-id`,
-	Args: cobra.RangeArgs(1, 50),
-	RunE: func(cmd *cobra.Command, args []string) error {
-		outcomes, err := service.Delete(cmd.Context(), args)
-		if err != nil {
-			return err
-		}
-		return printOutput(deleteResultsXMLOutput(outcomes))
-	},
+with one result per requested id that remains after deduplication. If any item
+fails, it prints all results before returning a non-zero exit status.`,
+		Example: `  memo delete 550e8400-e29b-41d4-a716-446655440000
+  memo delete 550e8400-e29b-41d4-a716-446655440000 550e8400-e29b-41d4-a716-446655440001`,
+		Args: cobra.RangeArgs(1, 50),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			ids := make([]memory.ID, 0, len(args))
+			for _, value := range args {
+				id, err := parseMemoryID(value)
+				if err != nil {
+					return err
+				}
+				ids = append(ids, id)
+			}
+			outcomes, deleteErr := service.Delete(cmd.Context(), ids)
+
+			output, err := deleteResultsXMLOutput(outcomes)
+			if err != nil {
+				return err
+			}
+			if err := printOutput(cmd, output); err != nil {
+				return err
+			}
+			if deleteErr != nil {
+				return deleteErr
+			}
+			for _, outcome := range outcomes {
+				if !outcome.Deleted {
+					return errDeleteIncomplete
+				}
+			}
+
+			return nil
+		},
+	}
 }
 
 type deleteResultsXML struct {
@@ -72,12 +96,12 @@ func deleteResultsXMLOutput(outcomes []memory.DeleteOutcome) (string, error) {
 	for _, outcome := range outcomes {
 		if outcome.Deleted {
 			dto.Deleted++
-			dto.Items = append(dto.Items, deleteResultXML{Deleted: &deletedXML{ID: outcome.ID}})
+			dto.Items = append(dto.Items, deleteResultXML{Deleted: &deletedXML{ID: outcome.ID.String()}})
 			continue
 		}
 
 		dto.Items = append(dto.Items, deleteResultXML{Failure: &failureXML{
-			ID:     outcome.ID,
+			ID:     outcome.ID.String(),
 			Status: string(outcome.Code),
 		}})
 	}

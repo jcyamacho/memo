@@ -14,19 +14,16 @@ func TestServiceGetReturnsMemoryDTO(t *testing.T) {
 	store := newMockStore(t)
 	service := NewService(store, nil)
 
-	m := mustLoadMemory(t, "abc123", "content", "/repo", updatedAt)
-	store.getByID["abc123"] = m
+	m := mustLoadMemory(t, testIDOne, "content", "/repo", updatedAt)
+	store.getByID[m.ID()] = m
 
-	got, err := service.Get(t.Context(), "abc123")
+	got, err := service.Get(t.Context(), m.ID())
 	if err != nil {
 		t.Fatalf("Get: %v", err)
 	}
 
-	want := MemoryDTO{
-		ID:        "abc123",
-		Content:   "content",
-		Workspace: "/repo",
-		UpdatedAt: updatedAt,
-	}
-	testutil.AssertEqual(t, want, got)
+	testutil.AssertEqual(t, testIDOne, got.ID.String())
+	testutil.AssertEqual(t, "content", got.Content)
+	testutil.AssertEqual(t, "/repo", got.Workspace)
+	testutil.AssertEqual(t, updatedAt, got.UpdatedAt)
 }
