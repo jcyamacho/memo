@@ -2,9 +2,8 @@ package testutil
 
 import (
 	"encoding/json"
+	"os"
 	"testing"
-
-	"github.com/jcyamacho/memo/internal/pkg/jsonutil"
 )
 
 func DecodeJSON[T any](t *testing.T, content string) T {
@@ -35,9 +34,15 @@ func EncodeJSON[T any](t *testing.T, value any) T {
 func ReadJSON[T any](t *testing.T, path string) T {
 	t.Helper()
 
-	value, err := jsonutil.Read[T](path)
+	data, err := os.ReadFile(path)
 	if err != nil {
-		t.Fatalf("Read: %v", err)
+		t.Fatalf("ReadFile: %v", err)
 	}
+
+	var value T
+	if err := json.Unmarshal(data, &value); err != nil {
+		t.Fatalf("Unmarshal: %v", err)
+	}
+
 	return value
 }

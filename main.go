@@ -5,14 +5,16 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 
 	"github.com/jcyamacho/memo/cmd"
-	"github.com/jcyamacho/memo/internal/config"
 	"github.com/jcyamacho/memo/internal/fsstore"
 	"github.com/jcyamacho/memo/internal/memory"
 	"github.com/jcyamacho/memo/internal/workspace"
 )
+
+const configDirEnv = "MEMO_CONFIG_DIR"
 
 func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -25,7 +27,7 @@ func main() {
 }
 
 func run(ctx context.Context) error {
-	dir, err := config.Dir()
+	dir, err := storeDir()
 	if err != nil {
 		return fmt.Errorf("resolve config directory: %w", err)
 	}
@@ -37,4 +39,17 @@ func run(ctx context.Context) error {
 
 	service := memory.NewService(store, workspace.GitResolver{})
 	return cmd.New(service).ExecuteContext(ctx)
+}
+
+func storeDir() (string, error) {
+	if dir := os.Getenv(configDirEnv); dir != "" {
+		return dir, nil
+	}
+
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+
+	return filepath.Join(home, ".config", "memo"), nil
 }

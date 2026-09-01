@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 
 	"github.com/jcyamacho/memo/internal/hookconfig"
-	"github.com/jcyamacho/memo/internal/pkg/jsonutil"
 )
 
 const memoContextCommand = "memo context"
@@ -32,20 +31,13 @@ func ConfigureHook() (string, error) {
 }
 
 func configureHookAt(path string) error {
-	config, err := jsonutil.Read[hookconfig.Config](path)
-	if err != nil {
-		return fmt.Errorf("read Claude hook config: %w", err)
-	}
-
-	if err := config.ConfigureSessionStart(hookconfig.SessionStartHook{
+	if err := hookconfig.ConfigureFile(path, hookconfig.SessionStartHook{
 		Command:       memoContextCommand,
 		StatusMessage: "Loading memories",
 		Timeout:       5,
 	}); err != nil {
 		return fmt.Errorf("configure Claude hook: %w", err)
 	}
-	if err := jsonutil.Write(path, config); err != nil {
-		return fmt.Errorf("write Claude hook config: %w", err)
-	}
+
 	return nil
 }
