@@ -5,12 +5,49 @@ import (
 	"os/exec"
 	"path/filepath"
 	"testing"
+
+	"github.com/jcyamacho/memo/internal/pkg/testutil"
 )
 
 const (
 	testDirectoryPerm = 0o755
 	testFilePerm      = 0o644
 )
+
+func TestGitResolverNormalizesPathsWithoutGit(t *testing.T) {
+	dir := t.TempDir()
+	t.Chdir(dir)
+	cwd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Getwd: %v", err)
+	}
+	mkdirAll(t, "nested")
+
+	for _, path := range []string{".", "nested/..", cwd, cwd + "/nested/.."} {
+		t.Run(path, func(t *testing.T) {
+			got, err := GitResolver{}.Resolve(t.Context(), path)
+			if err != nil {
+				t.Fatalf("GitResolver.Resolve: %v", err)
+			}
+			testutil.AssertEqual(t, cwd, got)
+		})
+	}
+}
+
+func TestGitResolverDistinguishesRelativeWorkspaces(t *testing.T) {
+	for range 2 {
+		t.Chdir(t.TempDir())
+		cwd, err := os.Getwd()
+		if err != nil {
+			t.Fatalf("Getwd: %v", err)
+		}
+		got, err := GitResolver{}.Resolve(t.Context(), ".")
+		if err != nil {
+			t.Fatalf("GitResolver.Resolve: %v", err)
+		}
+		testutil.AssertEqual(t, cwd, got)
+	}
+}
 
 func TestGitResolverPassthroughWithoutGit(t *testing.T) {
 	t.Parallel()

@@ -2,6 +2,7 @@ package workspace
 
 import (
 	"context"
+	"fmt"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -14,6 +15,10 @@ func (GitResolver) Resolve(ctx context.Context, path string) (string, error) {
 	if trimmed == "" {
 		return "", errRequired
 	}
+	absolute, err := filepath.Abs(trimmed)
+	if err != nil {
+		return "", fmt.Errorf("resolve absolute workspace path: %w", err)
+	}
 
 	cmd := exec.CommandContext(
 		ctx,
@@ -24,15 +29,15 @@ func (GitResolver) Resolve(ctx context.Context, path string) (string, error) {
 		"--git-dir",
 		"--git-common-dir",
 	)
-	cmd.Dir = trimmed
+	cmd.Dir = absolute
 	output, err := cmd.Output()
 	if err != nil {
-		return trimmed, nil
+		return absolute, nil
 	}
 
 	paths := strings.Split(strings.TrimSpace(string(output)), "\n")
 	if len(paths) != 3 {
-		return trimmed, nil
+		return absolute, nil
 	}
 	if paths[1] != paths[2] {
 		return filepath.Dir(paths[2]), nil
