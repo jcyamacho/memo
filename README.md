@@ -138,6 +138,7 @@ commands are mainly for agents and for manual memory maintenance.
 | List current workspace memories and globals | `memo list` |
 | List a specific workspace | `memo list --workspace /path/to/project` |
 | Add a workspace memory | `memo add "project fact"` |
+| Add with a readable id | `memo add --name "deploy branch" "deploys run from release"` |
 | Add from stdin | `some-command \| memo add` |
 | Add a global memory | `memo add --global "global preference"` |
 | Read one memory | `memo get <id>` |
@@ -166,8 +167,12 @@ Example memory:
 ```
 
 `memo list` prints a `<memories>` wrapper with `<memory>` children.
-Memory IDs are non-null UUIDs. Their version is not part of the domain contract;
-commands normalize valid textual representations.
+Memory IDs are either non-null UUIDs or names given with `memo add --name`.
+A name is lowercased, each run of characters other than `a-z` and `0-9` becomes
+one dash, it is cut to 48 characters, and a random six-character hex suffix is
+appended (`--name "Prefer Bun"` gives an id like `prefer-bun-3f9a2c`). The id is
+also the memory's file name in the store. UUID version is not part of the domain
+contract; commands normalize valid textual representations.
 
 `memo context` prints a `<memo_context>` wrapper with short instructions and
 the current workspace plus global memories. It is intended for session-start

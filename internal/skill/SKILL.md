@@ -9,9 +9,9 @@ credentials, tokens, guesses, or temporary progress.
 | Intent | Command |
 | --- | --- |
 | Review memories | `memo list [--workspace <path>]` |
-| Add workspace memory | `memo add [--workspace <path>] <content>` |
-| Add global memory | `memo add --global <content>` |
-| Add piped content | `some-command \| memo add [--global]` |
+| Add workspace memory | `memo add [--workspace <path>] --name <name> <content>` |
+| Add global memory | `memo add --global --name <name> <content>` |
+| Add piped content | `some-command \| memo add [--global] --name <name>` |
 | Read memory | `memo get <id>` |
 | Edit content | `memo edit <id> --content <content>` |
 | Edit piped content | `some-command \| memo edit <id>` |
@@ -81,6 +81,9 @@ personal data, and sensitive content.
 - Include scope or applicability when it is not obvious.
 - Split clauses that can become false independently.
 - Prefer direct wording over summaries of what happened.
+- Always pass `--name` with two to five ASCII English words that summarize the
+  memory, such as `--name "bun package manager"`. memo turns it into the
+  readable part of the id and appends a random suffix.
 
 Examples:
 
@@ -94,7 +97,9 @@ Examples:
 
 - `memo add`, `memo get`, `memo list`, `memo edit`, and `memo delete` print XML.
 - `memo list` prints `<memories>` with `<memory>` children.
-- Memory IDs are non-null UUIDs; their version is not part of the contract.
+- Memory IDs are opaque strings: either non-null UUIDs or lowercase kebab-case
+  names with a random suffix, such as `bun-package-manager-3f9a2c`. Copy them
+  exactly from command output.
 - Memory elements include `id` and `updated_at`. Global memories include
   `global="true"`. Memories from another workspace include `workspace="..."`.
 - `memo delete` prints `<delete_results>` with `<deleted>` and `<failure>`.

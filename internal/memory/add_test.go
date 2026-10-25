@@ -1,6 +1,8 @@
 package memory
 
 import (
+	"errors"
+	"strings"
 	"testing"
 
 	"github.com/jcyamacho/memo/internal/pkg/testutil"
@@ -44,4 +46,35 @@ func TestServiceAddGlobalSkipsWorkspaceResolver(t *testing.T) {
 	testutil.AssertEqual(t, "", store.inserted[0].Workspace())
 	testutil.AssertEqual(t, "content", got.Content)
 	testutil.AssertEqual(t, "", got.Workspace)
+}
+
+func TestServiceAddUsesNameInID(t *testing.T) {
+	t.Parallel()
+
+	store := newMockStore(t)
+	service := NewService(store, newMockWorkspaceResolver("/repo"))
+
+	got, err := service.Add(t.Context(), AddParams{Content: "content", Name: "Prefer Bun", Global: true})
+	if err != nil {
+		t.Fatalf("Add: %v", err)
+	}
+
+	if !strings.HasPrefix(got.ID.String(), "prefer-bun-") {
+		t.Fatalf("ID = %q, want prefix prefer-bun-", got.ID)
+	}
+	testutil.AssertEqual(t, 1, len(store.inserted))
+	testutil.AssertEqual(t, got.ID.String(), store.inserted[0].ID().String())
+}
+
+func TestServiceAddRejectsInvalidName(t *testing.T) {
+	t.Parallel()
+
+	store := newMockStore(t)
+	service := NewService(store, newMockWorkspaceResolver("/repo"))
+
+	_, err := service.Add(t.Context(), AddParams{Content: "content", Name: "!!!", Global: true})
+	if !errors.Is(err, ErrInvalidInput) {
+		t.Fatalf("Add = %v, want ErrInvalidInput", err)
+	}
+	testutil.AssertEqual(t, 0, len(store.inserted))
 }

@@ -11,7 +11,7 @@ import (
 func TestMemoryRejectsEmptyContent(t *testing.T) {
 	t.Parallel()
 
-	if _, err := New(" \n\t", "/repo"); !errors.Is(err, ErrInvalidInput) {
+	if _, err := New(" \n\t", "", "/repo"); !errors.Is(err, ErrInvalidInput) {
 		t.Fatalf("New error = %v, want ErrInvalidInput", err)
 	}
 

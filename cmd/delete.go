@@ -15,7 +15,7 @@ func newDeleteCommand(service *memory.Service) *cobra.Command {
 		Use:     "delete <id> [id...]",
 		Aliases: []string{"remove", "rm"},
 		Short:   "Delete one or more memories",
-		Long: `Delete memories confirmed obsolete or incorrect by UUID.
+		Long: `Delete memories confirmed obsolete or incorrect by id.
 
 Accepts 1 to 50 memory ids. Duplicate ids are ignored. The command prints XML
 with one result per requested id that remains after deduplication. If any item

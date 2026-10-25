@@ -41,17 +41,17 @@ func New(dir string) (*FS, error) {
 }
 
 func (s *FS) Insert(_ context.Context, m memory.Memory) error {
-	path := s.memoryPath(m.ID(), m.Workspace())
-
-	_, err := os.Stat(path)
-	if err == nil {
+	// IDs must be unique across the whole store because lookups by id search
+	// globals and every workspace.
+	located, err := s.findMemoryFile(m.ID())
+	if err != nil {
+		return err
+	}
+	if located != nil {
 		return memory.ErrExists
 	}
-	if !errors.Is(err, fs.ErrNotExist) {
-		return fmt.Errorf("check memory file: %w", err)
-	}
 
-	return writeMemoryFile(path, m.Content(), m.UpdatedAt())
+	return writeMemoryFile(s.memoryPath(m.ID(), m.Workspace()), m.Content(), m.UpdatedAt())
 }
 
 func (s *FS) Get(_ context.Context, id memory.ID) (memory.Memory, error) {

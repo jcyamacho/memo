@@ -5,7 +5,9 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/jcyamacho/memo/internal/memory"
 )
@@ -156,6 +158,58 @@ func TestFSInsertDuplicate(t *testing.T) {
 	}
 }
 
+func TestFSInsertRejectsIDUsedInAnotherScope(t *testing.T) {
+	t.Parallel()
+
+	store := newStore(t)
+	ctx := t.Context()
+	m := mustMemory(t, "content", "/repo/one")
+	mustInsert(t, store, m)
+
+	for _, workspace := range []string{"", "/repo/two"} {
+		duplicate, err := memory.Load(m.ID().String(), "other content", workspace, time.Now())
+		if err != nil {
+			t.Fatalf("Load duplicate: %v", err)
+		}
+		if err := store.Insert(ctx, duplicate); !errors.Is(err, memory.ErrExists) {
+			t.Fatalf("Insert duplicate in %q = %v, want ErrExists", workspace, err)
+		}
+	}
+}
+
+func TestFSNamedIDRoundTrip(t *testing.T) {
+	t.Parallel()
+
+	store := newStore(t)
+	ctx := t.Context()
+	workspace := "/repo/project"
+	m, err := memory.New("named memory", "Prefer Bun", workspace)
+	if err != nil {
+		t.Fatalf("memory.New: %v", err)
+	}
+	mustInsert(t, store, m)
+
+	path := store.memoryPath(m.ID(), workspace)
+	if !strings.HasPrefix(filepath.Base(path), "prefer-bun-") {
+		t.Fatalf("memory file = %q, want prefer-bun- prefix", path)
+	}
+	if _, err := os.Stat(path); err != nil {
+		t.Fatalf("stat named memory: %v", err)
+	}
+
+	items, err := store.List(ctx, workspace)
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	if len(items) != 1 || items[0].ID() != m.ID() {
+		t.Fatalf("items = %+v, want one item with id %q", items, m.ID())
+	}
+
+	if err := store.Delete(ctx, m.ID()); err != nil {
+		t.Fatalf("Delete: %v", err)
+	}
+}
+
 func TestFSUpdatePromotesWithoutLeavingDuplicate(t *testing.T) {
 	t.Parallel()
 
@@ -197,7 +251,7 @@ func newStoreAt(t *testing.T, dir string) *FS {
 func mustMemory(t *testing.T, content, workspace string) memory.Memory {
 	t.Helper()
 
-	m, err := memory.New(content, workspace)
+	m, err := memory.New(content, "", workspace)
 	if err != nil {
 		t.Fatalf("memory.New: %v", err)
 	}

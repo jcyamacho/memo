@@ -13,15 +13,15 @@ type Memory struct {
 	updatedAt time.Time
 }
 
-func New(content, workspace string) (Memory, error) {
+func New(content, name, workspace string) (Memory, error) {
 	normalized, err := normalizeContent(content)
 	if err != nil {
 		return Memory{}, err
 	}
 
-	id, err := NewID()
+	id, err := newMemoryID(name)
 	if err != nil {
-		return Memory{}, fmt.Errorf("generate memory id: %w", err)
+		return Memory{}, err
 	}
 
 	return Memory{
@@ -114,6 +114,22 @@ func (m *Memory) IsGlobal() bool {
 
 func (m *Memory) touch() {
 	m.updatedAt = time.Now().UTC()
+}
+
+func newMemoryID(name string) (ID, error) {
+	if name != "" {
+		id, err := NewNamedID(name)
+		if err != nil {
+			return ID{}, fmt.Errorf("memory name %q: %w", name, err)
+		}
+		return id, nil
+	}
+
+	id, err := NewID()
+	if err != nil {
+		return ID{}, fmt.Errorf("generate memory id: %w", err)
+	}
+	return id, nil
 }
 
 func normalizeContent(content string) (string, error) {

@@ -14,7 +14,7 @@ func newEditCommand(service *memory.Service) *cobra.Command {
 	command := &cobra.Command{
 		Use:   "edit <id>",
 		Short: "Edit an existing memory",
-		Long: `Edit an existing memory by UUID.
+		Long: `Edit an existing memory by id.
 
 Provide --content or piped stdin to update text. Use --global to promote a
 workspace memory to global scope. At least one content source or --global is

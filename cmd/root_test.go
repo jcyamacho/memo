@@ -53,6 +53,28 @@ func TestCommandExecutesMemoryLifecycleWithInjectedIO(t *testing.T) {
 	}
 }
 
+func TestAddCommandUsesNameInID(t *testing.T) {
+	t.Parallel()
+
+	service := newTestService(t)
+	addedOutput, err := executeCommand(t, service, nil, "add", "--name", "Prefer Bun", "durable fact")
+	if err != nil {
+		t.Fatalf("add: %v", err)
+	}
+	added := decodeMemoryXML(t, addedOutput)
+	if !strings.HasPrefix(added.ID, "prefer-bun-") {
+		t.Fatalf("added id = %q, want prefer-bun- prefix", added.ID)
+	}
+
+	gotOutput, err := executeCommand(t, service, nil, "get", added.ID)
+	if err != nil {
+		t.Fatalf("get: %v", err)
+	}
+	if got := decodeMemoryXML(t, gotOutput); got.ID != added.ID || got.Content != "durable fact" {
+		t.Fatalf("got memory = %#v", got)
+	}
+}
+
 type fixedWorkspaceResolver string
 
 func (r fixedWorkspaceResolver) Resolve(context.Context, string) (string, error) {

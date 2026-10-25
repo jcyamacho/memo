@@ -6,6 +6,7 @@ import (
 
 type AddParams struct {
 	Content   string
+	Name      string
 	Workspace string
 	Global    bool
 }
@@ -20,7 +21,7 @@ func (s *Service) Add(ctx context.Context, params AddParams) (MemoryDTO, error) 
 		resolvedWorkspace = resolved
 	}
 
-	m, err := New(params.Content, resolvedWorkspace)
+	m, err := New(params.Content, params.Name, resolvedWorkspace)
 	if err != nil {
 		return MemoryDTO{}, err
 	}
