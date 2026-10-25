@@ -12,10 +12,10 @@ credentials, tokens, guesses, or temporary progress.
 | Add workspace memory | `memo add [--workspace <path>] --name <name> <content>` |
 | Add global memory | `memo add --global --name <name> <content>` |
 | Add piped content | `some-command \| memo add [--global] --name <name>` |
-| Read memory | `memo get [--global] <id>` |
-| Edit content | `memo edit [--global] <id> --content <content>` |
-| Edit piped content | `some-command \| memo edit [--global] <id>` |
-| Delete memories | `memo delete [--global] <id> [id...]` |
+| Read memory | `memo get [--global \| --workspace <path>] <id>` |
+| Edit content | `memo edit [--global \| --workspace <path>] <id> --content <content>` |
+| Edit piped content | `some-command \| memo edit [--global \| --workspace <path>] <id>` |
+| Delete memories | `memo delete [--global \| --workspace <path>] <id> [id...]` |
 | List known workspaces | `memo workspaces` |
 
 ## Memory Context
@@ -27,8 +27,8 @@ workspace plus globals are in context.
   earlier `memo list` when they are current for the target workspace.
 - Run `memo list` from the target project only when memories are missing,
   incomplete, stale, ambiguous, or from another workspace.
-- Use `memo list --workspace <path>` only when you cannot run from the target
-  project directory.
+- Use `--workspace <path>` only when you cannot run from the target project
+  directory, and pass the same path to every memo command for that workspace.
 - Verify drift-prone memories against current files, commands, or environment.
 - Maintain only memories related to the current task unless the user requests a
   full-store cleanup.
@@ -87,7 +87,7 @@ personal data, and sensitive content.
 
 Examples:
 
-- Add: `User prefers Bun for JavaScript package management.`
+- Add as global: `User prefers Bun for JavaScript package management.`
 - Add as workspace: `Deploys must run from the release branch.`
 - Reject: `This repo has a README.md file.`
 - Reject: `Tests passed after the latest edit.`
@@ -103,10 +103,20 @@ Examples:
 - Memory elements include `id` and `updated_at`. Global memories include
   `global="true"`. `memo add`, `memo get`, and `memo edit` include
   `workspace="..."` for workspace memories.
-- `memo delete` prints `<delete_results>` with `<deleted>` and `<failure>`.
+- `memo delete` prints `<delete_results>` with `<deleted>` and `<failure>`. A
+  failure's `status` is `not_found` or `internal_error`.
 - `memo delete` exits non-zero when any requested deletion fails, after printing
   the complete XML result.
 - `memo workspaces` prints plain text paths, one per line.
+- `memo path` prints the store directory as plain text.
 
-Set `MEMO_CONFIG_DIR` to choose the store directory. The default is
-`~/.config/memo`.
+## Errors
+
+- `memory not found in workspace <path>`, `memory not found in globals`, or a
+  `not_found` delete status usually means the wrong scope. Check whether the
+  memory is marked `global="true"` or belongs to another workspace, then retry
+  with the matching `--global` or `--workspace`.
+- `memo edit` fails with `invalid input` when the new content is empty or equal
+  to the current content. Equal content means the memory is already correct.
+- An `internal_error` delete status is a store problem. Report it to the user
+  instead of retrying.

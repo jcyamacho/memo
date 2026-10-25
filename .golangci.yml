@@ -3,6 +3,7 @@ version: "2"
 linters:
   enable:
     - depguard
+    - usetesting
 
   settings:
     depguard:
@@ -16,3 +17,10 @@ linters:
               desc: "internal/pkg may only import stdlib, external modules, or internal/pkg"
           allow:
             - "github.com/jcyamacho/memo/internal/pkg"
+    usetesting:
+      context-background: true
+      context-todo: true
+
+formatters:
+  enable:
+    - gofmt
