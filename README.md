@@ -113,6 +113,12 @@ Set `MEMO_CONFIG_DIR` to use another store directory:
 MEMO_CONFIG_DIR=/path/to/store memo list
 ```
 
+Print the absolute path of the store directory in use:
+
+```bash
+memo path
+```
+
 ## Scopes
 
 Memo has two scopes:
@@ -152,6 +158,7 @@ commands are mainly for agents and for manual memory maintenance.
 | Edit a global memory | `memo edit --global <id> --content "corrected preference"` |
 | Delete memories | `memo delete <id> [id...]` |
 | List known workspaces | `memo workspaces` |
+| Print the store directory | `memo path` |
 | Print release version | `memo version` or `memo --version` |
 
 Run `memo skill` to inspect the operating guide that agents should follow when
@@ -190,6 +197,8 @@ with a non-zero status. Filesystem failures also retain their diagnostic cause
 on stderr.
 
 `memo workspaces` prints plain text paths, one per line.
+
+`memo path` prints the store directory as one plain text absolute path.
 
 ## Development
 

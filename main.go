@@ -38,12 +38,12 @@ func run(ctx context.Context) error {
 	}
 
 	service := memory.NewService(store, workspace.GitResolver{})
-	return cmd.New(service).ExecuteContext(ctx)
+	return cmd.New(service, dir).ExecuteContext(ctx)
 }
 
 func storeDir() (string, error) {
 	if dir := os.Getenv(configDirEnv); dir != "" {
-		return dir, nil
+		return filepath.Abs(dir)
 	}
 
 	home, err := os.UserHomeDir()

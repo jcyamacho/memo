@@ -10,6 +10,7 @@ import (
 
 	"github.com/jcyamacho/memo/internal/fsstore"
 	"github.com/jcyamacho/memo/internal/memory"
+	"github.com/spf13/cobra"
 )
 
 func TestCommandExecutesMemoryLifecycleWithInjectedIO(t *testing.T) {
@@ -122,7 +123,12 @@ func newTestService(t *testing.T) *memory.Service {
 func executeCommand(t *testing.T, service *memory.Service, stdin *strings.Reader, args ...string) (string, error) {
 	t.Helper()
 
-	command := New(service)
+	return runCommand(t, New(service, ""), stdin, args...)
+}
+
+func runCommand(t *testing.T, command *cobra.Command, stdin *strings.Reader, args ...string) (string, error) {
+	t.Helper()
+
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 	if stdin != nil {

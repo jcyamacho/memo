@@ -5,7 +5,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func New(service *memory.Service) *cobra.Command {
+func New(service *memory.Service, storeDir string) *cobra.Command {
 	root := &cobra.Command{
 		Use:           "memo",
 		Short:         "Durable memory for humans and coding agents",
@@ -32,7 +32,7 @@ Agent rules:
 
 Store:
   Set MEMO_CONFIG_DIR to choose the store directory. The default is
-  ~/.config/memo.`,
+  ~/.config/memo. Run memo path to print the directory in use.`,
 		Example: `  memo list
   memo context
   memo add "prefer small Go interfaces"
@@ -53,6 +53,7 @@ Store:
 		newGetCommand(service),
 		newHookCommand(),
 		newListCommand(service),
+		newPathCommand(storeDir),
 		newSkillCommand(),
 		newVersionCommand(),
 		newWorkspacesCommand(service),
