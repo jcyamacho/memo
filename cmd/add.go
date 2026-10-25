@@ -1,8 +1,6 @@
 package cmd
 
 import (
-	"fmt"
-
 	"github.com/jcyamacho/memo/internal/memory"
 	"github.com/spf13/cobra"
 )
@@ -34,7 +32,8 @@ whitespace-only content is rejected after trimming.`,
   memo add --workspace /path/to/project "project-specific fact"`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := validateAddFlags(global, workspace); err != nil {
+			workspacePath, err := scopeWorkspacePath(global, workspace)
+			if err != nil {
 				return err
 			}
 			content, err := readContent(cmd, args)
@@ -42,13 +41,6 @@ whitespace-only content is rejected after trimming.`,
 				return err
 			}
 
-			var workspacePath string
-			if !global {
-				workspacePath, err = resolveWorkspacePath(workspace)
-				if err != nil {
-					return err
-				}
-			}
 			m, err := service.Add(cmd.Context(), memory.AddParams{
 				Content:   content,
 				Name:      name,
@@ -71,11 +63,4 @@ whitespace-only content is rejected after trimming.`,
 	command.Flags().BoolVar(&global, "global", false, "save as global memory (not project-scoped)")
 
 	return command
-}
-
-func validateAddFlags(global bool, workspaceFlag string) error {
-	if global && workspaceFlag != "" {
-		return fmt.Errorf("--global and --workspace cannot be used together")
-	}
-	return nil
 }

@@ -99,19 +99,6 @@ func (m *Memory) SetContent(content string) (bool, error) {
 	return true, nil
 }
 
-func (m *Memory) PromoteToGlobal() bool {
-	if m.IsGlobal() {
-		return false
-	}
-	m.workspace = ""
-	m.touch()
-	return true
-}
-
-func (m *Memory) IsGlobal() bool {
-	return m.workspace == ""
-}
-
 func (m *Memory) touch() {
 	m.updatedAt = time.Now().UTC()
 }

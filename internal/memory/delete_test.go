@@ -11,7 +11,7 @@ func TestServiceDeleteDeduplicatesAndClassifiesOutcomes(t *testing.T) {
 	t.Parallel()
 
 	store := newMockStore(t)
-	service := NewService(store, nil)
+	service := NewService(store, newMockWorkspaceResolver("/repo"))
 	errInternal := errors.New("store failed")
 
 	missingID := mustParseID(t, testIDTwo)
@@ -20,7 +20,10 @@ func TestServiceDeleteDeduplicatesAndClassifiesOutcomes(t *testing.T) {
 	store.deleteErrByID[failedID] = errInternal
 
 	okID := mustParseID(t, testIDOne)
-	got, err := service.Delete(t.Context(), []ID{okID, missingID, okID, failedID})
+	got, err := service.Delete(t.Context(), DeleteParams{
+		IDs:       []ID{okID, missingID, okID, failedID},
+		Workspace: ".",
+	})
 	if !errors.Is(err, errInternal) {
 		t.Fatalf("Delete error = %v, want store error", err)
 	}
@@ -37,4 +40,5 @@ func TestServiceDeleteDeduplicatesAndClassifiesOutcomes(t *testing.T) {
 		t.Fatalf("failed outcome = %#v", got[2])
 	}
 	testutil.AssertEqual(t, []string{testIDOne, testIDTwo, testIDThree}, store.deletedIDs)
+	testutil.AssertEqual(t, []string{"/repo", "/repo", "/repo"}, store.deleteWorkspaces)
 }

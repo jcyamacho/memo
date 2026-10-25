@@ -24,7 +24,7 @@ func TestFSRoundTrip(t *testing.T) {
 	global := mustMemory(t, "global memory", "")
 	mustInsert(t, store, global)
 
-	got, err := store.Get(ctx, m.ID())
+	got, err := store.Get(ctx, m.ID(), workspace)
 	if err != nil {
 		t.Fatalf("Get: %v", err)
 	}
@@ -47,7 +47,7 @@ func TestFSRoundTrip(t *testing.T) {
 		t.Fatalf("Update: %v", err)
 	}
 
-	got, err = store.Get(ctx, m.ID())
+	got, err = store.Get(ctx, m.ID(), workspace)
 	if err != nil {
 		t.Fatalf("Get after update: %v", err)
 	}
@@ -55,17 +55,17 @@ func TestFSRoundTrip(t *testing.T) {
 		t.Fatalf("content = %q, want updated", got.Content())
 	}
 
-	if err := store.Delete(ctx, m.ID()); err != nil {
+	if err := store.Delete(ctx, m.ID(), workspace); err != nil {
 		t.Fatalf("Delete workspace memory: %v", err)
 	}
 	missingID, err := memory.ParseID("550e8400-e29b-41d4-a716-446655440099")
 	if err != nil {
 		t.Fatalf("ParseID missing: %v", err)
 	}
-	if err := store.Delete(ctx, missingID); !errors.Is(err, memory.ErrNotFound) {
+	if err := store.Delete(ctx, missingID, workspace); !errors.Is(err, memory.ErrNotFound) {
 		t.Fatalf("Delete missing = %v, want ErrNotFound", err)
 	}
-	if err := store.Delete(ctx, global.ID()); err != nil {
+	if err := store.Delete(ctx, global.ID(), ""); err != nil {
 		t.Fatalf("Delete global memory: %v", err)
 	}
 
@@ -158,22 +158,35 @@ func TestFSInsertDuplicate(t *testing.T) {
 	}
 }
 
-func TestFSInsertRejectsIDUsedInAnotherScope(t *testing.T) {
+func TestFSScopesOperationsToOneDirectory(t *testing.T) {
 	t.Parallel()
 
 	store := newStore(t)
 	ctx := t.Context()
-	m := mustMemory(t, "content", "/repo/one")
+	m := mustMemory(t, "workspace one", "/repo/one")
 	mustInsert(t, store, m)
 
 	for _, workspace := range []string{"", "/repo/two"} {
-		duplicate, err := memory.Load(m.ID().String(), "other content", workspace, time.Now())
+		if _, err := store.Get(ctx, m.ID(), workspace); !errors.Is(err, memory.ErrNotFound) {
+			t.Fatalf("Get from %q = %v, want ErrNotFound", workspace, err)
+		}
+		if err := store.Delete(ctx, m.ID(), workspace); !errors.Is(err, memory.ErrNotFound) {
+			t.Fatalf("Delete from %q = %v, want ErrNotFound", workspace, err)
+		}
+
+		sameID, err := memory.Load(m.ID().String(), "same id", workspace, time.Now())
 		if err != nil {
-			t.Fatalf("Load duplicate: %v", err)
+			t.Fatalf("Load same id: %v", err)
 		}
-		if err := store.Insert(ctx, duplicate); !errors.Is(err, memory.ErrExists) {
-			t.Fatalf("Insert duplicate in %q = %v, want ErrExists", workspace, err)
-		}
+		mustInsert(t, store, sameID)
+	}
+
+	got, err := store.Get(ctx, m.ID(), "/repo/one")
+	if err != nil {
+		t.Fatalf("Get original: %v", err)
+	}
+	if got.Content() != "workspace one" {
+		t.Fatalf("content = %q, want workspace one", got.Content())
 	}
 }
 
@@ -205,30 +218,21 @@ func TestFSNamedIDRoundTrip(t *testing.T) {
 		t.Fatalf("items = %+v, want one item with id %q", items, m.ID())
 	}
 
-	if err := store.Delete(ctx, m.ID()); err != nil {
+	if err := store.Delete(ctx, m.ID(), workspace); err != nil {
 		t.Fatalf("Delete: %v", err)
 	}
 }
 
-func TestFSUpdatePromotesWithoutLeavingDuplicate(t *testing.T) {
+func TestFSUpdateRequiresExistingMemory(t *testing.T) {
 	t.Parallel()
 
 	store := newStore(t)
-	m := mustMemory(t, "workspace memory", "/repo/project")
-	mustInsert(t, store, m)
-
-	m.PromoteToGlobal()
-	if err := store.Update(t.Context(), m); err != nil {
-		t.Fatalf("Update: %v", err)
+	m := mustMemory(t, "never inserted", "/repo/project")
+	if err := store.Update(t.Context(), m); !errors.Is(err, memory.ErrNotFound) {
+		t.Fatalf("Update missing = %v, want ErrNotFound", err)
 	}
-
-	globalPath := store.memoryPath(m.ID(), "")
-	workspacePath := store.memoryPath(m.ID(), "/repo/project")
-	if _, err := os.Stat(globalPath); err != nil {
-		t.Fatalf("stat global memory: %v", err)
-	}
-	if _, err := os.Stat(workspacePath); !errors.Is(err, os.ErrNotExist) {
-		t.Fatalf("workspace memory still exists: %v", err)
+	if _, err := os.Stat(store.memoryPath(m.ID(), "/repo/project")); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("Update created memory file: %v", err)
 	}
 }
 

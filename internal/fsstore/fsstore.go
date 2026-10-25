@@ -41,29 +41,26 @@ func New(dir string) (*FS, error) {
 }
 
 func (s *FS) Insert(_ context.Context, m memory.Memory) error {
-	// IDs must be unique across the whole store because lookups by id search
-	// globals and every workspace.
-	located, err := s.findMemoryFile(m.ID())
-	if err != nil {
-		return err
-	}
-	if located != nil {
+	path := s.memoryPath(m.ID(), m.Workspace())
+
+	_, err := os.Stat(path)
+	if err == nil {
 		return memory.ErrExists
 	}
+	if !errors.Is(err, fs.ErrNotExist) {
+		return fmt.Errorf("check memory file: %w", err)
+	}
 
-	return writeMemoryFile(s.memoryPath(m.ID(), m.Workspace()), m.Content(), m.UpdatedAt())
+	return writeMemoryFile(path, m.Content(), m.UpdatedAt())
 }
 
-func (s *FS) Get(_ context.Context, id memory.ID) (memory.Memory, error) {
-	located, err := s.findMemoryFile(id)
-	if err != nil {
+func (s *FS) Get(_ context.Context, id memory.ID, workspace string) (memory.Memory, error) {
+	path := s.memoryPath(id, workspace)
+	if err := requireMemoryFile(path); err != nil {
 		return memory.Memory{}, err
 	}
-	if located == nil {
-		return memory.Memory{}, memory.ErrNotFound
-	}
 
-	return s.readRecord(located.path, located.workspace)
+	return s.readRecord(path, workspace)
 }
 
 func (s *FS) List(_ context.Context, workspace string) ([]memory.Memory, error) {
@@ -83,45 +80,25 @@ func (s *FS) List(_ context.Context, workspace string) ([]memory.Memory, error) 
 	return items, nil
 }
 
-func (s *FS) Update(ctx context.Context, m memory.Memory) error {
-	existing, err := s.Get(ctx, m.ID())
-	if err != nil {
+func (s *FS) Update(_ context.Context, m memory.Memory) error {
+	path := s.memoryPath(m.ID(), m.Workspace())
+	if err := requireMemoryFile(path); err != nil {
 		return err
 	}
 
-	currentPath := s.memoryPath(existing.ID(), existing.Workspace())
-	targetPath := s.memoryPath(m.ID(), m.Workspace())
-
-	if err := writeMemoryFile(targetPath, m.Content(), m.UpdatedAt()); err != nil {
-		return err
-	}
-	if targetPath != currentPath {
-		if err := os.Remove(currentPath); err != nil && !errors.Is(err, fs.ErrNotExist) {
-			return fmt.Errorf("remove old memory file: %w", err)
-		}
-		if err := s.cleanupWorkspaceDirectory(existing.Workspace()); err != nil {
-			return err
-		}
-	}
-	return nil
+	return writeMemoryFile(path, m.Content(), m.UpdatedAt())
 }
 
-func (s *FS) Delete(_ context.Context, id memory.ID) error {
-	located, err := s.findMemoryFile(id)
-	if err != nil {
-		return err
-	}
-	if located == nil {
+func (s *FS) Delete(_ context.Context, id memory.ID, workspace string) error {
+	err := os.Remove(s.memoryPath(id, workspace))
+	if errors.Is(err, fs.ErrNotExist) {
 		return memory.ErrNotFound
 	}
-
-	if err := os.Remove(located.path); err != nil {
+	if err != nil {
 		return fmt.Errorf("remove memory file: %w", err)
 	}
-	if err := s.cleanupWorkspaceDirectory(located.workspace); err != nil {
-		return err
-	}
-	return nil
+
+	return s.cleanupWorkspaceDirectory(workspace)
 }
 
 func (s *FS) ListWorkspaces(_ context.Context) ([]string, error) {
@@ -176,61 +153,6 @@ func (s *FS) readDirectoryRecords(dirPath, workspace string) ([]memory.Memory, e
 	return records, nil
 }
 
-func (s *FS) findMemoryFile(id memory.ID) (*memoryTarget, error) {
-	globalPath := s.memoryPath(id, "")
-
-	_, err := os.Stat(globalPath)
-	if err == nil {
-		return &memoryTarget{path: globalPath}, nil
-	}
-	if !errors.Is(err, fs.ErrNotExist) {
-		return nil, fmt.Errorf("find global memory: %w", err)
-	}
-
-	workspaceTargets, err := s.listWorkspaceTargets()
-	if err != nil {
-		return nil, err
-	}
-	for _, target := range workspaceTargets {
-		filePath := filepath.Join(target.path, id.String()+markdownExt)
-
-		_, err := os.Stat(filePath)
-		if err == nil {
-			return &memoryTarget{path: filePath, workspace: target.workspace}, nil
-		}
-		if !errors.Is(err, fs.ErrNotExist) {
-			return nil, fmt.Errorf("find workspace memory: %w", err)
-		}
-	}
-	return nil, nil
-}
-
-func (s *FS) listWorkspaceTargets() ([]memoryTarget, error) {
-	entries, err := os.ReadDir(s.workspacesDir)
-	if err != nil {
-		if errors.Is(err, fs.ErrNotExist) {
-			return nil, nil
-		}
-		return nil, fmt.Errorf("list workspace directories: %w", err)
-	}
-
-	var targets []memoryTarget
-	for _, entry := range entries {
-		if !entry.IsDir() {
-			continue
-		}
-		workspace, err := url.PathUnescape(entry.Name())
-		if err != nil {
-			return nil, fmt.Errorf("decode workspace %q: %w", entry.Name(), err)
-		}
-		targets = append(targets, memoryTarget{
-			path:      filepath.Join(s.workspacesDir, entry.Name()),
-			workspace: workspace,
-		})
-	}
-	return targets, nil
-}
-
 func (s *FS) readRecord(path, workspace string) (memory.Memory, error) {
 	content, err := os.ReadFile(path)
 	if err != nil {
@@ -250,6 +172,17 @@ func (s *FS) readRecord(path, workspace string) (memory.Memory, error) {
 		return memory.Memory{}, err
 	}
 	return record, nil
+}
+
+func requireMemoryFile(path string) error {
+	_, err := os.Stat(path)
+	if errors.Is(err, fs.ErrNotExist) {
+		return memory.ErrNotFound
+	}
+	if err != nil {
+		return fmt.Errorf("check memory file: %w", err)
+	}
+	return nil
 }
 
 func (s *FS) memoryPath(id memory.ID, workspace string) string {

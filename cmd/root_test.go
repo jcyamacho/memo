@@ -75,6 +75,34 @@ func TestAddCommandUsesNameInID(t *testing.T) {
 	}
 }
 
+func TestCommandsRequireGlobalFlagForGlobalMemories(t *testing.T) {
+	t.Parallel()
+
+	service := newTestService(t)
+	addedOutput, err := executeCommand(t, service, nil, "add", "--global", "global fact")
+	if err != nil {
+		t.Fatalf("add: %v", err)
+	}
+	added := decodeMemoryXML(t, addedOutput)
+
+	if _, err := executeCommand(t, service, nil, "get", added.ID); !errors.Is(err, memory.ErrNotFound) {
+		t.Fatalf("get without --global = %v, want ErrNotFound", err)
+	}
+	if _, err := executeCommand(t, service, nil, "edit", "--global", added.ID, "--content", "corrected global fact"); err != nil {
+		t.Fatalf("edit --global: %v", err)
+	}
+	gotOutput, err := executeCommand(t, service, nil, "get", "--global", added.ID)
+	if err != nil {
+		t.Fatalf("get --global: %v", err)
+	}
+	if got := decodeMemoryXML(t, gotOutput); got.Content != "corrected global fact" {
+		t.Fatalf("global content = %q, want corrected global fact", got.Content)
+	}
+	if _, err := executeCommand(t, service, nil, "delete", "--global", added.ID); err != nil {
+		t.Fatalf("delete --global: %v", err)
+	}
+}
+
 type fixedWorkspaceResolver string
 
 func (r fixedWorkspaceResolver) Resolve(context.Context, string) (string, error) {

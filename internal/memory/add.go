@@ -12,16 +12,12 @@ type AddParams struct {
 }
 
 func (s *Service) Add(ctx context.Context, params AddParams) (MemoryDTO, error) {
-	resolvedWorkspace := ""
-	if !params.Global {
-		resolved, err := s.workspaceResolver.Resolve(ctx, params.Workspace)
-		if err != nil {
-			return MemoryDTO{}, err
-		}
-		resolvedWorkspace = resolved
+	workspace, err := s.resolveScope(ctx, params.Workspace, params.Global)
+	if err != nil {
+		return MemoryDTO{}, err
 	}
 
-	m, err := New(params.Content, params.Name, resolvedWorkspace)
+	m, err := New(params.Content, params.Name, workspace)
 	if err != nil {
 		return MemoryDTO{}, err
 	}

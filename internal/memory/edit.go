@@ -3,27 +3,26 @@ package memory
 import "context"
 
 type EditParams struct {
-	ID            ID
-	Content       *string
-	PromoteGlobal bool
+	ID        ID
+	Content   string
+	Workspace string
+	Global    bool
 }
 
 func (s *Service) Edit(ctx context.Context, params EditParams) (MemoryDTO, error) {
-	m, err := s.store.Get(ctx, params.ID)
+	workspace, err := s.resolveScope(ctx, params.Workspace, params.Global)
 	if err != nil {
 		return MemoryDTO{}, err
 	}
 
-	changed := false
-	if params.Content != nil {
-		contentChanged, err := m.SetContent(*params.Content)
-		if err != nil {
-			return MemoryDTO{}, err
-		}
-		changed = changed || contentChanged
+	m, err := s.store.Get(ctx, params.ID, workspace)
+	if err != nil {
+		return MemoryDTO{}, scopeNotFound(err, workspace)
 	}
-	if params.PromoteGlobal {
-		changed = m.PromoteToGlobal() || changed
+
+	changed, err := m.SetContent(params.Content)
+	if err != nil {
+		return MemoryDTO{}, err
 	}
 	if !changed {
 		return MemoryDTO{}, ErrInvalidInput

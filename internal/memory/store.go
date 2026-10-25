@@ -4,9 +4,9 @@ import "context"
 
 type Store interface {
 	Insert(ctx context.Context, m Memory) error
-	Get(ctx context.Context, id ID) (Memory, error)
+	Get(ctx context.Context, id ID, workspace string) (Memory, error)
 	List(ctx context.Context, workspace string) ([]Memory, error)
 	Update(ctx context.Context, m Memory) error
-	Delete(ctx context.Context, id ID) error
+	Delete(ctx context.Context, id ID, workspace string) error
 	ListWorkspaces(ctx context.Context) ([]string, error)
 }

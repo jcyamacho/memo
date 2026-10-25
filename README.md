@@ -119,7 +119,12 @@ Memo has two scopes:
 
 - Workspace memories apply to one project. By default, memo resolves the current
   directory to the Git repository root when possible.
-- Global memories apply across projects and are created with `--global`.
+- Global memories apply across projects.
+
+`add`, `get`, `edit`, and `delete` act on one scope at a time: the current
+workspace by default, or global memories with `--global`. A memory in another
+workspace is reachable only with `--workspace <path>`. To move a memory to
+another scope, add it in the new scope, then delete the old one.
 
 Use `--workspace <path>` only when you cannot run the command from the target
 project directory.
@@ -144,7 +149,7 @@ commands are mainly for agents and for manual memory maintenance.
 | Read one memory | `memo get <id>` |
 | Edit content | `memo edit <id> --content "corrected fact"` |
 | Edit from stdin | `some-command \| memo edit <id>` |
-| Promote to global | `memo edit <id> --global` |
+| Edit a global memory | `memo edit --global <id> --content "corrected preference"` |
 | Delete memories | `memo delete <id> [id...]` |
 | List known workspaces | `memo workspaces` |
 | Print release version | `memo version` or `memo --version` |
@@ -171,7 +176,8 @@ Memory IDs are either non-null UUIDs or names given with `memo add --name`.
 A name is lowercased, each run of characters other than `a-z` and `0-9` becomes
 one dash, it is cut to 48 characters, and a random six-character hex suffix is
 appended (`--name "Prefer Bun"` gives an id like `prefer-bun-3f9a2c`). The id is
-also the memory's file name in the store. UUID version is not part of the domain
+also the memory's file name in the store, so it is unique only within its scope.
+UUID version is not part of the domain
 contract; commands normalize valid textual representations.
 
 `memo context` prints a `<memo_context>` wrapper with short instructions and

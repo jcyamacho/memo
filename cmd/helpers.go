@@ -59,6 +59,18 @@ func parseMemoryID(value string) (memory.ID, error) {
 	return id, nil
 }
 
+// scopeWorkspacePath returns the workspace path for commands that accept
+// --global and --workspace; it is empty for the global scope.
+func scopeWorkspacePath(global bool, workspaceFlag string) (string, error) {
+	if !global {
+		return resolveWorkspacePath(workspaceFlag)
+	}
+	if workspaceFlag != "" {
+		return "", fmt.Errorf("--global and --workspace cannot be used together")
+	}
+	return "", nil
+}
+
 func resolveWorkspacePath(workspaceFlag string) (string, error) {
 	if workspaceFlag != "" {
 		return workspaceFlag, nil

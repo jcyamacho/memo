@@ -17,7 +17,8 @@ func New(service *memory.Service) *cobra.Command {
 Scope:
   Workspace memories apply to one project. By default, memo resolves the current
   directory to the Git repository root when possible.
-  Global memories apply across projects and are created with --global.
+  Global memories apply across projects. Pass --global to add, get, edit, or
+  delete them.
 
 Output:
   context, add, get, list, edit, and delete print XML intended to be easy for

@@ -12,8 +12,9 @@ type mockStore struct {
 	inserted  []Memory
 	insertErr error
 
-	getByID    map[ID]Memory
-	getErrByID map[ID]error
+	getByID       map[ID]Memory
+	getErrByID    map[ID]error
+	getWorkspaces []string
 
 	listItems     []Memory
 	listErr       error
@@ -22,8 +23,9 @@ type mockStore struct {
 	updated   []Memory
 	updateErr error
 
-	deleteErrByID map[ID]error
-	deletedIDs    []string
+	deleteErrByID    map[ID]error
+	deletedIDs       []string
+	deleteWorkspaces []string
 
 	workspaces        []string
 	listWorkspacesErr error
@@ -45,8 +47,10 @@ func (m *mockStore) Insert(_ context.Context, memory Memory) error {
 	return m.insertErr
 }
 
-func (m *mockStore) Get(_ context.Context, id ID) (Memory, error) {
+func (m *mockStore) Get(_ context.Context, id ID, workspace string) (Memory, error) {
 	m.t.Helper()
+
+	m.getWorkspaces = append(m.getWorkspaces, workspace)
 
 	if err, ok := m.getErrByID[id]; ok {
 		return Memory{}, err
@@ -68,8 +72,9 @@ func (m *mockStore) Update(_ context.Context, memory Memory) error {
 	return m.updateErr
 }
 
-func (m *mockStore) Delete(_ context.Context, id ID) error {
+func (m *mockStore) Delete(_ context.Context, id ID, workspace string) error {
 	m.deletedIDs = append(m.deletedIDs, id.String())
+	m.deleteWorkspaces = append(m.deleteWorkspaces, workspace)
 	return m.deleteErrByID[id]
 }
 

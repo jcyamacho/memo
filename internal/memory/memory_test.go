@@ -50,23 +50,3 @@ func TestSetContentTouchesOnlyWhenContentChanges(t *testing.T) {
 		t.Fatalf("UpdatedAt = %s, want after %s", m.UpdatedAt(), updatedAt)
 	}
 }
-
-func TestPromoteToGlobalTouchesOnlyWhenScopeChanges(t *testing.T) {
-	t.Parallel()
-
-	updatedAt := time.Date(2026, 6, 28, 12, 0, 0, 0, time.UTC)
-	m, err := Load(testIDOne, "content", "/repo", updatedAt)
-	if err != nil {
-		t.Fatalf("Load: %v", err)
-	}
-
-	testutil.AssertEqual(t, true, m.PromoteToGlobal())
-	testutil.AssertEqual(t, true, m.IsGlobal())
-	if !m.UpdatedAt().After(updatedAt) {
-		t.Fatalf("UpdatedAt = %s, want after %s", m.UpdatedAt(), updatedAt)
-	}
-
-	promotedAt := m.UpdatedAt()
-	testutil.AssertEqual(t, false, m.PromoteToGlobal())
-	testutil.AssertEqual(t, promotedAt, m.UpdatedAt())
-}

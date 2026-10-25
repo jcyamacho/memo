@@ -12,11 +12,10 @@ credentials, tokens, guesses, or temporary progress.
 | Add workspace memory | `memo add [--workspace <path>] --name <name> <content>` |
 | Add global memory | `memo add --global --name <name> <content>` |
 | Add piped content | `some-command \| memo add [--global] --name <name>` |
-| Read memory | `memo get <id>` |
-| Edit content | `memo edit <id> --content <content>` |
-| Edit piped content | `some-command \| memo edit <id>` |
-| Promote to global | `memo edit <id> --global` |
-| Delete memories | `memo delete <id> [id...]` |
+| Read memory | `memo get [--global] <id>` |
+| Edit content | `memo edit [--global] <id> --content <content>` |
+| Edit piped content | `some-command \| memo edit [--global] <id>` |
+| Delete memories | `memo delete [--global] <id> [id...]` |
 | List known workspaces | `memo workspaces` |
 
 ## Memory Context
@@ -39,7 +38,7 @@ workspace plus globals are in context.
 - Add when the candidate passes the durability gate and no similar memory
   already exists.
 - Edit when a known memory id still represents the right durable idea but its
-  content or scope should change.
+  content should change.
 - Delete when a known memory id is obsolete, incorrect, or redundant. Add or
   edit the replacement before deleting the old memory.
 - Do nothing when the candidate is already represented, too weak, unverifiable,
@@ -70,10 +69,11 @@ personal data, and sensitive content.
   commands, architecture, and environment constraints.
 - Global is rare. Use it only for stable preferences or facts that genuinely
   apply across projects.
-- Promote with `memo edit <id> --global` when the same memory should become
-  global.
-- To replace an incorrectly global memory with a workspace memory, create the
-  workspace memory first, then delete the global one.
+- `get`, `edit`, and `delete` act on one scope: the current workspace by
+  default, or global memories with `--global`. Pass `--global` for memories
+  marked `global="true"`.
+- To move a memory to another scope, add it in the new scope first, then delete
+  the old one.
 
 ## Writing
 
@@ -99,9 +99,10 @@ Examples:
 - `memo list` prints `<memories>` with `<memory>` children.
 - Memory IDs are opaque strings: either non-null UUIDs or lowercase kebab-case
   names with a random suffix, such as `bun-package-manager-3f9a2c`. Copy them
-  exactly from command output.
+  exactly from command output. An id is unique only within its scope.
 - Memory elements include `id` and `updated_at`. Global memories include
-  `global="true"`. Memories from another workspace include `workspace="..."`.
+  `global="true"`. `memo add`, `memo get`, and `memo edit` include
+  `workspace="..."` for workspace memories.
 - `memo delete` prints `<delete_results>` with `<deleted>` and `<failure>`.
 - `memo delete` exits non-zero when any requested deletion fails, after printing
   the complete XML result.

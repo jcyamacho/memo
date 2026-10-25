@@ -11,19 +11,31 @@ import (
 var errDeleteIncomplete = errors.New("one or more memories could not be deleted")
 
 func newDeleteCommand(service *memory.Service) *cobra.Command {
-	return &cobra.Command{
+	var workspace string
+	var global bool
+
+	command := &cobra.Command{
 		Use:     "delete <id> [id...]",
 		Aliases: []string{"remove", "rm"},
 		Short:   "Delete one or more memories",
 		Long: `Delete memories confirmed obsolete or incorrect by id.
 
+The memories must belong to the current workspace. Use --global for global
+memories, or --workspace for memories in another workspace. One call deletes
+from one scope only.
+
 Accepts 1 to 50 memory ids. Duplicate ids are ignored. The command prints XML
 with one result per requested id that remains after deduplication. If any item
 fails, it prints all results before returning a non-zero exit status.`,
 		Example: `  memo delete 550e8400-e29b-41d4-a716-446655440000
-  memo delete 550e8400-e29b-41d4-a716-446655440000 550e8400-e29b-41d4-a716-446655440001`,
+  memo delete 550e8400-e29b-41d4-a716-446655440000 550e8400-e29b-41d4-a716-446655440001
+  memo delete --global prefer-bun-3f9a2c`,
 		Args: cobra.RangeArgs(1, 50),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			workspacePath, err := scopeWorkspacePath(global, workspace)
+			if err != nil {
+				return err
+			}
 			ids := make([]memory.ID, 0, len(args))
 			for _, value := range args {
 				id, err := parseMemoryID(value)
@@ -32,7 +44,11 @@ fails, it prints all results before returning a non-zero exit status.`,
 				}
 				ids = append(ids, id)
 			}
-			outcomes, deleteErr := service.Delete(cmd.Context(), ids)
+			outcomes, deleteErr := service.Delete(cmd.Context(), memory.DeleteParams{
+				IDs:       ids,
+				Workspace: workspacePath,
+				Global:    global,
+			})
 
 			output, err := deleteResultsXMLOutput(outcomes)
 			if err != nil {
@@ -53,6 +69,10 @@ fails, it prints all results before returning a non-zero exit status.`,
 			return nil
 		},
 	}
+	command.Flags().StringVar(&workspace, "workspace", "", "workspace path (default: cwd)")
+	command.Flags().BoolVar(&global, "global", false, "delete global memories")
+
+	return command
 }
 
 type deleteResultsXML struct {
