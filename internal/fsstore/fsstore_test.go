@@ -36,8 +36,8 @@ func TestFSRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("List: %v", err)
 	}
-	if len(items) != 2 {
-		t.Fatalf("List len = %d, want 2", len(items))
+	if len(items) != 1 {
+		t.Fatalf("List len = %d, want 1", len(items))
 	}
 
 	if _, err := m.SetContent("updated content"); err != nil {
@@ -117,7 +117,7 @@ func TestFSWorkspacePathWithSeparators(t *testing.T) {
 	}
 }
 
-func TestFSListIncludesWorkspaceAndGlobals(t *testing.T) {
+func TestFSListReturnsOneScope(t *testing.T) {
 	t.Parallel()
 
 	store := newStore(t)
@@ -126,22 +126,19 @@ func TestFSListIncludesWorkspaceAndGlobals(t *testing.T) {
 	mustInsert(t, store, mustMemory(t, "workspace one", "/repo/one"))
 	mustInsert(t, store, mustMemory(t, "workspace two", "/repo/two"))
 
-	items, err := store.List(ctx, "/repo/one")
-	if err != nil {
-		t.Fatalf("List: %v", err)
-	}
-
-	got := make(map[string]struct{}, len(items))
-	for _, item := range items {
-		got[item.Content()] = struct{}{}
-	}
-	want := []string{"global", "workspace one"}
-	if len(got) != len(want) {
-		t.Fatalf("got contents %v, want %v", got, want)
-	}
-	for _, content := range want {
-		if _, ok := got[content]; !ok {
-			t.Fatalf("missing content %q in %v", content, got)
+	for _, tc := range []struct {
+		workspace string
+		want      string
+	}{
+		{workspace: "/repo/one", want: "workspace one"},
+		{workspace: "", want: "global"},
+	} {
+		items, err := store.List(ctx, tc.workspace)
+		if err != nil {
+			t.Fatalf("List %q: %v", tc.workspace, err)
+		}
+		if len(items) != 1 || items[0].Content() != tc.want || items[0].Workspace() != tc.workspace {
+			t.Fatalf("List %q = %+v, want one %q item in that scope", tc.workspace, items, tc.want)
 		}
 	}
 }

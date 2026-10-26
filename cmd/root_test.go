@@ -38,12 +38,9 @@ func TestCommandExecutesMemoryLifecycleWithInjectedIO(t *testing.T) {
 	if err != nil {
 		t.Fatalf("list: %v", err)
 	}
-	var listed memoriesXML
-	if err := xml.Unmarshal([]byte(listOutput), &listed); err != nil {
-		t.Fatalf("unmarshal list output: %v", err)
-	}
-	if listed.Workspace != "/repo" || len(listed.Items) != 1 || listed.Items[0].Content != "corrected fact" {
-		t.Fatalf("listed memories = %#v", listed)
+	if !strings.HasPrefix(listOutput, "<memories>\n<workspace path=\"/repo\">\n- "+added.ID+" (") ||
+		!strings.HasSuffix(listOutput, "): corrected fact\n</workspace>\n<global>\n</global>\n</memories>\n") {
+		t.Fatalf("list output = %q, want one corrected workspace memory", listOutput)
 	}
 
 	if _, err := executeCommand(t, service, nil, "delete", added.ID); err != nil {

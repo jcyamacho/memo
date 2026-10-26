@@ -18,6 +18,12 @@ func newAddCommand(service *memory.Service) *cobra.Command {
 Provide content as a positional argument or through stdin. By default the memory
 is scoped to the current workspace. Use --global for facts that apply across projects.
 
+Agents should pass content through a quoted heredoc (<<'EOF'), which keeps every
+character, including quotes, backticks, and $(...). Inside double quotes the shell
+runs backticks and $(...) and would save their output in the memory. Without a
+content argument, add reads stdin: it fails when stdin is a terminal and can wait
+for input when a harness leaves stdin open.
+
 Use --name with a short summary of two to five ASCII words. It is lowercased,
 every run of characters other than a-z and 0-9 becomes one dash, and it is cut
 to 48 characters. A random six-character hex suffix is appended, and the result
@@ -26,10 +32,11 @@ a UUID.
 
 The command prints the created memory as XML, including its id. Empty or
 whitespace-only content is rejected after trimming.`,
-		Example: `  memo add --name "cobra cli" "this project uses Cobra for the CLI"
-  memo add --global --name "concise answers" "prefer concise final answers"
-  git diff --stat | memo add
-  memo add --workspace /path/to/project "project-specific fact"`,
+		Example: `  memo add --name "deploy branch" <<'EOF'
+  Deploys must run from the release branch, not from main.
+  EOF
+  memo add --global --name "concise answers" 'prefer concise final answers'
+  memo add --workspace /path/to/project --name "project fact" 'project-specific fact'`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			workspacePath, err := scopeWorkspacePath(global, workspace)

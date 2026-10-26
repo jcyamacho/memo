@@ -16,9 +16,9 @@ type mockStore struct {
 	getErrByID    map[ID]error
 	getWorkspaces []string
 
-	listItems     []Memory
-	listErr       error
-	listWorkspace string
+	listItemsByWorkspace map[string][]Memory
+	listErr              error
+	listedWorkspaces     []string
 
 	updated   []Memory
 	updateErr error
@@ -63,8 +63,8 @@ func (m *mockStore) Get(_ context.Context, id ID, workspace string) (Memory, err
 }
 
 func (m *mockStore) List(_ context.Context, workspace string) ([]Memory, error) {
-	m.listWorkspace = workspace
-	return m.listItems, m.listErr
+	m.listedWorkspaces = append(m.listedWorkspaces, workspace)
+	return m.listItemsByWorkspace[workspace], m.listErr
 }
 
 func (m *mockStore) Update(_ context.Context, memory Memory) error {

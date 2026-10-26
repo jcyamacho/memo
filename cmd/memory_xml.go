@@ -17,24 +17,18 @@ type memoryXML struct {
 }
 
 func memoryXMLOutput(m memory.MemoryDTO) (string, error) {
-	return marshalXML(newMemoryXML(m, ""))
-}
-
-func newMemoryXML(m memory.MemoryDTO, skipWorkspaceIfEquals string) memoryXML {
 	dto := memoryXML{
 		ID:        m.ID.String(),
 		UpdatedAt: m.UpdatedAt.UTC().Format("2006-01-02T15:04:05.000Z"),
 		Content:   m.Content,
 	}
-
 	if m.IsGlobal() {
-		value := true
-		dto.Global = &value
-	} else if m.Workspace != skipWorkspaceIfEquals {
+		dto.Global = new(true)
+	} else {
 		dto.Workspace = m.Workspace
 	}
 
-	return dto
+	return marshalXML(dto)
 }
 
 func marshalXML(value any) (string, error) {

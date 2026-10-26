@@ -18,7 +18,7 @@ func newDeleteCommand(service *memory.Service) *cobra.Command {
 		Use:     "delete <id> [id...]",
 		Aliases: []string{"remove", "rm"},
 		Short:   "Delete one or more memories",
-		Long: `Delete memories confirmed obsolete or incorrect by id.
+		Long: `Delete memories confirmed obsolete, incorrect, or redundant by id.
 
 The memories must belong to the current workspace. Use --global for global
 memories, or --workspace for memories in another workspace. One call deletes

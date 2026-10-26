@@ -9,14 +9,34 @@ credentials, tokens, guesses, or temporary progress.
 | Intent | Command |
 | --- | --- |
 | Review memories | `memo list [--workspace <path>]` |
-| Add workspace memory | `memo add [--workspace <path>] --name <name> <content>` |
-| Add global memory | `memo add --global --name <name> <content>` |
-| Add piped content | `some-command \| memo add [--global] --name <name>` |
+| Print session-start context | `memo context [--workspace <path>]` |
+| Add workspace memory | `memo add [--workspace <path>] --name <name> <<'EOF'` |
+| Add global memory | `memo add --global --name <name> <<'EOF'` |
 | Read memory | `memo get [--global \| --workspace <path>] <id>` |
-| Edit content | `memo edit [--global \| --workspace <path>] <id> --content <content>` |
-| Edit piped content | `some-command \| memo edit [--global \| --workspace <path>] <id>` |
+| Edit content | `memo edit [--global \| --workspace <path>] <id> <<'EOF'` |
 | Delete memories | `memo delete [--global \| --workspace <path>] <id> [id...]` |
 | List known workspaces | `memo workspaces` |
+| Print store directory | `memo path` |
+
+Always pass content to `memo add` and `memo edit` through a quoted heredoc: put
+the content on the lines after the command and end it with a line that contains
+only `EOF`. The quotes in `<<'EOF'` make the shell keep every character,
+including quotes, backticks, and `$(...)`. If a content line is exactly `EOF`,
+use another delimiter such as `<<'MEMO_EOF'`.
+
+Do not pass content as an argument, with `--content`, or through `echo`: the
+shell can rewrite it first. Do not run either command without content: memo
+then reads stdin and fails or waits for input.
+
+```bash
+memo add --name "deploy branch" <<'EOF'
+Deploys must run from the release branch; don't run `make deploy` from main.
+EOF
+
+memo edit --global bun-package-manager-3f9a2c <<'EOF'
+User prefers Bun as their JavaScript package manager and runtime.
+EOF
+```
 
 ## Memory Context
 
@@ -29,7 +49,9 @@ workspace plus globals are in context.
   incomplete, stale, ambiguous, or from another workspace.
 - Use `--workspace <path>` only when you cannot run from the target project
   directory, and pass the same path to every memo command for that workspace.
-- Verify drift-prone memories against current files, commands, or environment.
+- Before relying on a memory that names commands, paths, versions, or tools,
+  check it against current files or the environment. Edit or delete it when it
+  is no longer true.
 - Maintain only memories related to the current task unless the user requests a
   full-store cleanup.
 
@@ -43,6 +65,8 @@ workspace plus globals are in context.
   edit the replacement before deleting the old memory.
 - Do nothing when the candidate is already represented, too weak, unverifiable,
   or unrelated.
+- After adding, editing, or deleting, tell the user what changed, with the scope
+  and id of each memory.
 
 ## Durability Gate
 
@@ -55,13 +79,18 @@ Save a candidate only when every answer is yes:
 4. Is it confirmed rather than speculative?
 5. Is it one independently reusable idea?
 
+When the user explicitly asks you to remember something, save it unless it is a
+secret, credential, or token. If it fails another question above, tell the user
+which one and save it only if they confirm.
+
 Good candidates: explicit user corrections, stable preferences, durable
 decisions with reusable reasoning, non-obvious project constraints, confirmed
 debugging discoveries, and recurring failure modes with known fixes.
 
 Reject: task state, progress, plans, reminders, chronological summaries, facts
-visible in current files, generic knowledge, guesses, unresolved possibilities,
-personal data, and sensitive content.
+visible in current files (including instruction files loaded every session,
+such as AGENTS.md or CLAUDE.md), generic knowledge, guesses, unresolved
+possibilities, personal identifiers or private details, and sensitive content.
 
 ## Scope
 
@@ -69,9 +98,13 @@ personal data, and sensitive content.
   commands, architecture, and environment constraints.
 - Global is rare. Use it only for stable preferences or facts that genuinely
   apply across projects.
+- memo resolves the workspace to the Git repository root, so subdirectories and
+  linked worktrees share the main checkout's memories. A `<workspace path>` that
+  names that root is the current workspace even when it differs from the current
+  directory.
 - `get`, `edit`, and `delete` act on one scope: the current workspace by
   default, or global memories with `--global`. Pass `--global` for memories
-  marked `global="true"`.
+  listed under `<global>` or marked `global="true"`.
 - To move a memory to another scope, add it in the new scope first, then delete
   the old one.
 
@@ -95,14 +128,20 @@ Examples:
 
 ## Output Contract
 
-- `memo add`, `memo get`, `memo list`, `memo edit`, and `memo delete` print XML.
-- `memo list` prints `<memories>` with `<memory>` children.
+- `memo list` prints `<memories>` with a `<workspace path="...">` block and a
+  `<global>` block, newest first within each block. Each memory is one line,
+  `- <id> (<updated date>): <content>`, with raw content; continuation lines of
+  multi-line content are indented by two spaces. The enclosing block states the
+  scope.
+- `memo context` prints `<memo>` with an `<instructions>` block and the same two
+  blocks as `memo list`, with `- <id>: <content>` lines.
 - Memory IDs are opaque strings: either non-null UUIDs or lowercase kebab-case
   names with a random suffix, such as `bun-package-manager-3f9a2c`. Copy them
   exactly from command output. An id is unique only within its scope.
-- Memory elements include `id` and `updated_at`. Global memories include
-  `global="true"`. `memo add`, `memo get`, and `memo edit` include
-  `workspace="..."` for workspace memories.
+- `memo add`, `memo get`, and `memo edit` print one XML `<memory>` element with
+  `id`, `updated_at`, and `global="true"` for global memories or
+  `workspace="..."` for workspace memories. XML escapes such as `&#39;` and
+  `&amp;` stand for `'` and `&`; write the plain characters when editing.
 - `memo delete` prints `<delete_results>` with `<deleted>` and `<failure>`. A
   failure's `status` is `not_found` or `internal_error`.
 - `memo delete` exits non-zero when any requested deletion fails, after printing
@@ -114,8 +153,8 @@ Examples:
 
 - `memory not found in workspace <path>`, `memory not found in globals`, or a
   `not_found` delete status usually means the wrong scope. Check whether the
-  memory is marked `global="true"` or belongs to another workspace, then retry
-  with the matching `--global` or `--workspace`.
+  memory is under `<global>`, is marked `global="true"`, or belongs to
+  another workspace, then retry with the matching `--global` or `--workspace`.
 - `memo edit` fails with `invalid input` when the new content is empty or equal
   to the current content. Equal content means the memory is already correct.
 - An `internal_error` delete status is a store problem. Report it to the user

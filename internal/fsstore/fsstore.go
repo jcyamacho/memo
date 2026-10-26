@@ -64,20 +64,7 @@ func (s *FS) Get(_ context.Context, id memory.ID, workspace string) (memory.Memo
 }
 
 func (s *FS) List(_ context.Context, workspace string) ([]memory.Memory, error) {
-	targets := []memoryTarget{
-		{path: s.globalsDir},
-		{path: s.workspaceDirectory(workspace), workspace: workspace},
-	}
-	var items []memory.Memory
-	for _, target := range targets {
-		records, err := s.readDirectoryRecords(target.path, target.workspace)
-		if err != nil {
-			return nil, err
-		}
-		items = append(items, records...)
-	}
-
-	return items, nil
+	return s.readDirectoryRecords(s.scopeDirectory(workspace), workspace)
 }
 
 func (s *FS) Update(_ context.Context, m memory.Memory) error {
@@ -123,11 +110,6 @@ func (s *FS) ListWorkspaces(_ context.Context) ([]string, error) {
 	}
 	sort.Strings(workspaces)
 	return workspaces, nil
-}
-
-type memoryTarget struct {
-	path      string
-	workspace string
 }
 
 func (s *FS) readDirectoryRecords(dirPath, workspace string) ([]memory.Memory, error) {
@@ -186,10 +168,14 @@ func requireMemoryFile(path string) error {
 }
 
 func (s *FS) memoryPath(id memory.ID, workspace string) string {
+	return filepath.Join(s.scopeDirectory(workspace), id.String()+markdownExt)
+}
+
+func (s *FS) scopeDirectory(workspace string) string {
 	if workspace == "" {
-		return filepath.Join(s.globalsDir, id.String()+markdownExt)
+		return s.globalsDir
 	}
-	return filepath.Join(s.workspaceDirectory(workspace), id.String()+markdownExt)
+	return s.workspaceDirectory(workspace)
 }
 
 func (s *FS) workspaceDirectory(workspace string) string {

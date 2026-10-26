@@ -1,7 +1,8 @@
 package cmd
 
 import (
-	"encoding/xml"
+	"strings"
+	"time"
 
 	"github.com/jcyamacho/memo/internal/memory"
 	"github.com/spf13/cobra"
@@ -14,11 +15,17 @@ func newListCommand(service *memory.Service) *cobra.Command {
 		Use:     "list",
 		Aliases: []string{"ls"},
 		Short:   "List memories for a workspace",
-		Long: `List workspace-scoped and global memories, newest first.
+		Long: `List workspace-scoped and global memories.
+
+The output wraps a <workspace path="..."> block and a <global> block in
+<memories>, newest first within each block. Each memory is one line,
+"- <id> (<updated date>): <content>", and continuation lines of multi-line
+content are indented by two spaces. Pass --global to get, edit, or delete a
+memory from <global>.
 
 By default, the workspace is the current directory resolved to the Git repository
 root when possible. The result includes memories for that workspace plus global
-memories. The command returns the full result set with no pagination as XML.`,
+memories. The command returns the full result set with no pagination.`,
 		Example: `  memo list
   memo ls
   memo list --workspace /path/to/project`,
@@ -33,11 +40,7 @@ memories. The command returns the full result set with no pagination as XML.`,
 				return err
 			}
 
-			output, err := memoriesXMLOutput(result.Workspace, result.Items)
-			if err != nil {
-				return err
-			}
-			return printOutput(cmd, output)
+			return printOutput(cmd, memoriesOutput(result))
 		},
 	}
 	command.Flags().StringVar(&workspace, "workspace", "", "workspace path (default: cwd)")
@@ -45,21 +48,35 @@ memories. The command returns the full result set with no pagination as XML.`,
 	return command
 }
 
-type memoriesXML struct {
-	XMLName   xml.Name    `xml:"memories"`
-	Workspace string      `xml:"workspace,attr"`
-	Items     []memoryXML `xml:"memory"`
+func memoriesOutput(result memory.ListResult) string {
+	return "<memories>\n" + memoryBlocks(result, listedMemoryLine) + "</memories>"
 }
 
-func memoriesXMLOutput(workspace string, items []memory.MemoryDTO) (string, error) {
-	dto := memoriesXML{
-		Workspace: workspace,
-		Items:     make([]memoryXML, 0, len(items)),
-	}
+func listedMemoryLine(m memory.MemoryDTO) string {
+	return memoryLine(m.ID.String()+" ("+m.UpdatedAt.UTC().Format(time.DateOnly)+")", m.Content)
+}
 
+// memoryBlocks puts workspace memories before globals so they survive harnesses
+// that keep only the start of long output.
+func memoryBlocks(result memory.ListResult, line func(memory.MemoryDTO) string) string {
+	return `<workspace path="` + result.Workspace + "\">\n" +
+		memoryLines(result.WorkspaceItems, line) +
+		"</workspace>\n<global>\n" +
+		memoryLines(result.GlobalItems, line) +
+		"</global>\n"
+}
+
+func memoryLines(items []memory.MemoryDTO, line func(memory.MemoryDTO) string) string {
+	var lines strings.Builder
 	for _, item := range items {
-		dto.Items = append(dto.Items, newMemoryXML(item, workspace))
+		lines.WriteString(line(item))
+		lines.WriteByte('\n')
 	}
 
-	return marshalXML(dto)
+	return lines.String()
+}
+
+// memoryLine indents continuation lines so multi-line content stays in one list item.
+func memoryLine(label, content string) string {
+	return "- " + label + ": " + strings.ReplaceAll(content, "\n", "\n  ")
 }

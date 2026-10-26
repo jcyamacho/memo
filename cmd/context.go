@@ -1,13 +1,13 @@
 package cmd
 
 import (
-	"encoding/xml"
-
 	"github.com/jcyamacho/memo/internal/memory"
 	"github.com/spf13/cobra"
 )
 
 const contextInstructions = "Durable memories are managed by the `memo` CLI; use the memories below as durable context for this session. " +
+	"If the harness truncated this output, read the full output file it points to, or run `memo list`, before acting on the first request. " +
+	"When the user corrects you, states a lasting preference, or asks you to remember something, or when you confirm a non-obvious project fact, consider saving a memory. " +
 	"Before adding, editing, or deleting memories, run `memo skill` unless its rules are already in context."
 
 func newContextCommand(service *memory.Service) *cobra.Command {
@@ -19,7 +19,14 @@ func newContextCommand(service *memory.Service) *cobra.Command {
 		Short:   "Print session-start context for coding agents",
 		Long: `Print durable memory context for a coding agent session.
 
-The output includes a short instruction block plus workspace and global memories.
+The output wraps an <instructions> block, a <workspace path="..."> block, and a
+<global> block in <memo>. Memories are newest first within each block, one
+"- <id>: <content>" line each, as in memo list but without update dates; run
+memo list when update dates matter. Pass --global to get, edit, or delete a
+memory from <global>.
+If a harness truncates hook output, the instructions tell the agent to read the
+full output file or run memo list before acting on the first request. They also
+tell the agent when to consider saving a memory.
 By default, the workspace is the current directory resolved to the Git repository
 root when possible.`,
 		Example: `  memo context
@@ -35,11 +42,7 @@ root when possible.`,
 				return err
 			}
 
-			output, err := contextXMLOutput(result.Workspace, result.Items)
-			if err != nil {
-				return err
-			}
-			return printOutput(cmd, output)
+			return printOutput(cmd, contextOutput(result))
 		},
 	}
 	command.Flags().StringVar(&workspace, "workspace", "", "workspace path (default: cwd)")
@@ -47,27 +50,11 @@ root when possible.`,
 	return command
 }
 
-type memoContextXML struct {
-	XMLName      xml.Name           `xml:"memo_context"`
-	Workspace    string             `xml:"workspace,attr"`
-	Instructions string             `xml:"instructions"`
-	Memories     contextMemoriesXML `xml:"memories"`
+func contextOutput(result memory.ListResult) string {
+	return "<memo>\n<instructions>" + contextInstructions + "</instructions>\n" +
+		memoryBlocks(result, contextMemoryLine) + "</memo>"
 }
 
-type contextMemoriesXML struct {
-	Items []memoryXML `xml:"memory"`
-}
-
-func contextXMLOutput(workspace string, items []memory.MemoryDTO) (string, error) {
-	dto := memoContextXML{
-		Workspace:    workspace,
-		Instructions: contextInstructions,
-		Memories:     contextMemoriesXML{Items: make([]memoryXML, 0, len(items))},
-	}
-
-	for _, item := range items {
-		dto.Memories.Items = append(dto.Memories.Items, newMemoryXML(item, workspace))
-	}
-
-	return marshalXML(dto)
+func contextMemoryLine(m memory.MemoryDTO) string {
+	return memoryLine(m.ID.String(), m.Content)
 }

@@ -45,7 +45,11 @@ memo context
 ```
 
 `memo context` loads workspace and global memories, then tells the agent to use
-`memo skill` before adding, editing, or deleting memories.
+`memo skill` before adding, editing, or deleting memories. If the harness
+truncates the hook output, it tells the agent to read the full output file or
+run `memo list` before acting on the first request. It also tells the agent to
+consider saving a memory when the user corrects it, states a lasting preference,
+or asks it to remember something, or when it confirms a non-obvious project fact.
 
 After configuring Codex, open `/hooks` once to review and trust the hook. Codex
 does not run new or changed non-managed hooks until they are trusted.
@@ -148,27 +152,39 @@ commands are mainly for agents and for manual memory maintenance.
 | Print session-start context | `memo context` |
 | List current workspace memories and globals | `memo list` |
 | List a specific workspace | `memo list --workspace /path/to/project` |
-| Add a workspace memory | `memo add "project fact"` |
-| Add with a readable id | `memo add --name "deploy branch" "deploys run from release"` |
+| Add a workspace memory | `memo add 'project fact'` |
+| Add with a readable id | `memo add --name "deploy branch" 'deploys run from release'` |
 | Add from stdin | `some-command \| memo add` |
-| Add a global memory | `memo add --global "global preference"` |
+| Add a global memory | `memo add --global 'global preference'` |
 | Read one memory | `memo get <id>` |
-| Edit content | `memo edit <id> --content "corrected fact"` |
+| Edit content | `memo edit <id> --content 'corrected fact'` |
 | Edit from stdin | `some-command \| memo edit <id>` |
-| Edit a global memory | `memo edit --global <id> --content "corrected preference"` |
+| Edit a global memory | `memo edit --global <id> --content 'corrected preference'` |
 | Delete memories | `memo delete <id> [id...]` |
 | List known workspaces | `memo workspaces` |
 | Print the store directory | `memo path` |
 | Print release version | `memo version` or `memo --version` |
+
+Wrap content in single quotes. Agents, and anyone writing content with single
+quotes, should pass it through a quoted heredoc (`<<'EOF'`), which keeps every
+character. Inside double quotes, the shell runs backticks and `$(...)` and saves
+their output in the memory:
+
+```bash
+memo add --name "deploy branch" <<'EOF'
+Deploys must run from the release branch; don't run `make deploy` from main.
+EOF
+```
 
 Run `memo skill` to inspect the operating guide that agents should follow when
 maintaining memories.
 
 ## Output
 
-`context`, `add`, `get`, `list`, `edit`, and `delete` print XML.
+`context` and `list` print one line per memory inside XML-style section tags.
+`add`, `get`, `edit`, and `delete` print XML.
 
-Example memory:
+`add`, `get`, and `edit` print one memory with its scope:
 
 ```xml
 <memory
@@ -178,7 +194,22 @@ Example memory:
 >prefer concise final answers</memory>
 ```
 
-`memo list` prints a `<memories>` wrapper with `<memory>` children.
+`memo list` prints a `<workspace path="...">` block and a `<global>` block inside
+`<memories>`, newest first within each block. Each memory is one Markdown list
+line with its id, update date, and raw content. Continuation lines of multi-line
+content are indented by two spaces:
+
+```text
+<memories>
+<workspace path="/repo">
+- use-pnpm-3f9a2c (2026-03-01): use pnpm
+</workspace>
+<global>
+- concise-answers-1a2b3c (2026-03-01): prefer concise final answers
+</global>
+</memories>
+```
+
 Memory IDs are either non-null UUIDs or names given with `memo add --name`.
 A name is lowercased, each run of characters other than `a-z` and `0-9` becomes
 one dash, it is cut to 48 characters, and a random six-character hex suffix is
@@ -187,9 +218,9 @@ also the memory's file name in the store, so it is unique only within its scope.
 UUID version is not part of the domain
 contract; commands normalize valid textual representations.
 
-`memo context` prints a `<memo_context>` wrapper with short instructions and
-the current workspace plus global memories. It is intended for session-start
-hooks in coding-agent harnesses.
+`memo context` prints `<memo>` with an `<instructions>` block and the same
+`<workspace path="...">` and `<global>` blocks as `memo list`, without update
+dates. It is intended for session-start hooks in coding-agent harnesses.
 
 `memo delete` prints `<delete_results>` with ordered `<deleted>` and `<failure>`
 children. It still prints the complete XML result when an item fails, then exits

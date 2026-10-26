@@ -21,23 +21,25 @@ Scope:
   delete them.
 
 Output:
-  context, add, get, list, edit, and delete print XML intended to be easy for
-  humans to inspect and stable for LLM tools to parse.
+  context and list print one line per memory inside <workspace path="..."> and
+  <global> blocks. add, get, edit, and delete print XML. Both formats are easy
+  for humans to inspect and stable for LLM tools to read.
 
 Agent rules:
   Use loaded memory context before deciding what to add, edit, or delete.
   Store durable facts, preferences, and project context. Do not store secrets.
-  Use edit for corrections to an existing memory. Use delete only for obsolete
-  or incorrect memories.
+  Use edit for corrections to an existing memory. Use delete only for obsolete,
+  incorrect, or redundant memories. Pass content to add and edit through a
+  quoted heredoc (<<'EOF') so the shell keeps every character.
 
 Store:
   Set MEMO_CONFIG_DIR to choose the store directory. The default is
   ~/.config/memo. Run memo path to print the directory in use.`,
 		Example: `  memo list
   memo context
-  memo add "prefer small Go interfaces"
-  some-command | memo add --global
-  memo edit 550e8400-e29b-41d4-a716-446655440000 --content "corrected memory"
+  memo add --name "small interfaces" 'prefer small Go interfaces'
+  memo add --global --name "concise answers" 'prefer concise final answers'
+  memo edit 550e8400-e29b-41d4-a716-446655440000 --content 'corrected memory'
   memo delete 550e8400-e29b-41d4-a716-446655440000`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return cmd.Help()

@@ -17,8 +17,10 @@ func newEditCommand(service *memory.Service) *cobra.Command {
 		Short: "Edit an existing memory",
 		Long: `Replace the content of an existing memory by id.
 
-Provide the new content with --content or piped stdin. The memory must belong to
-the current workspace. Use --global for a global memory, or --workspace for a
+Provide the new content through stdin or --content. Agents should use a quoted
+heredoc (<<'EOF'), which keeps every character, including quotes, backticks, and
+$(...); inside double quotes the shell runs backticks and $(...). The memory must
+belong to the current workspace. Use --global for a global memory, or --workspace for a
 memory in another workspace.
 
 Edit cannot change a memory's scope. To move a memory, add it in the new scope,
@@ -26,9 +28,10 @@ then delete the old one.
 
 Use edit when a memory is still useful but needs correction. The command prints
 the updated memory as XML.`,
-		Example: `  memo edit 550e8400-e29b-41d4-a716-446655440000 --content "corrected fact"
-  echo "corrected fact" | memo edit 550e8400-e29b-41d4-a716-446655440000
-  memo edit --global prefer-bun-3f9a2c --content "corrected preference"`,
+		Example: `  memo edit 550e8400-e29b-41d4-a716-446655440000 <<'EOF'
+  corrected fact
+  EOF
+  memo edit --global prefer-bun-3f9a2c --content 'corrected preference'`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			workspacePath, err := scopeWorkspacePath(global, workspace)
