@@ -48,16 +48,21 @@ Write tests close to the code they exercise.
 ## Memory CLI Behavior
 
 This project is intentionally a standalone CLI for durable memories, not an MCP.
+Favor direct shell usability, low-friction setup, and stable output that coding
+agents can read.
 
 - Print command results to stdout as XML or plain text, write errors to stderr,
   and exit non-zero on failure.
 - Keep `memo skill` and command help useful to LLM operators, not only humans
-  scanning flags.
+  scanning flags. They should teach operational use: listing before changes,
+  workspace and global scope, add, edit, delete, or no-op decisions, durability
+  gates, and storage exclusions.
 - When you change commands, flags, or output, update the command help,
   `internal/skill/SKILL.md`, and `README.md` in the same change.
-- Express memory policy, such as what to save, durability, and scope choice, as
-  guidance in `internal/skill/SKILL.md`. Enforce it in code only when the CLI
-  must.
+- Keep the CLI focused on storage, scope resolution, output formatting, and
+  CRUD. Express memory policy, such as what to save, durability, and scope
+  choice, as guidance in `internal/skill/SKILL.md`. Enforce it in code only when
+  the CLI must.
 - Validate store-affecting changes against a temporary store such as
   `MEMO_CONFIG_DIR="$(mktemp -d)"`. On the real store, run only read commands
   such as `memo list` or `memo path` unless the user asks to change it.

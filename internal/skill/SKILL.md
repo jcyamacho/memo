@@ -110,15 +110,34 @@ possibilities, personal identifiers or private details, and sensitive content.
 
 ## Writing
 
-- Write one reusable idea in one to three sentences.
-- Include scope or applicability when it is not obvious.
+Write each memory as a standing fact or instruction that a future session can
+apply without this conversation.
+
+- State one reusable idea in one to three sentences, in present tense.
+- Lead with the action or fact, then when it applies: "Run X when Y", "User
+  prefers X for Y".
+- Add the reason in one short clause when it changes how to apply the memory to
+  a new case.
+- Name the tool, command, or component instead of "this", "that bug", or "the
+  above".
+- Leave out what memo already records: dates and "as of" stamps, the global or
+  workspace label, and the current project's name in workspace memories.
+- Leave out session narrative: who said it, when, or what you did. Write an
+  absolute date only when the date is part of the fact, such as the version
+  that removed an API.
 - Split clauses that can become false independently.
-- Prefer direct wording over summaries of what happened.
 - Always pass `--name` with two to five ASCII English words that summarize the
   memory, such as `--name "bun package manager"`. memo turns it into the
   readable part of the id and appends a random suffix.
 
-Examples:
+| Instead of | Write |
+| --- | --- |
+| `2026-10-26: user said they now prefer Bun` | `User prefers Bun for JavaScript package management.` |
+| `For this repo, tests need the DB running` | `Integration tests need Postgres; start it with docker compose up db.` |
+| `Fixed the flaky upload test today with a retry` | `The upload test fails under parallel runs; run it with -p 1.` |
+| `User prefers Bun and concise answers` | Two memories, one per preference. |
+
+Other outcomes:
 
 - Add as global: `User prefers Bun for JavaScript package management.`
 - Add as workspace: `Deploys must run from the release branch.`
@@ -134,7 +153,7 @@ Examples:
   multi-line content are indented by two spaces. The enclosing block states the
   scope.
 - `memo context` prints `<memo>` with an `<instructions>` block and the same two
-  blocks as `memo list`, with `- <id>: <content>` lines.
+  blocks as `memo list`.
 - Memory IDs are opaque strings: either non-null UUIDs or lowercase kebab-case
   names with a random suffix, such as `bun-package-manager-3f9a2c`. Copy them
   exactly from command output. An id is unique only within its scope.

@@ -20,10 +20,9 @@ func newContextCommand(service *memory.Service) *cobra.Command {
 		Long: `Print durable memory context for a coding agent session.
 
 The output wraps an <instructions> block, a <workspace path="..."> block, and a
-<global> block in <memo>. Memories are newest first within each block, one
-"- <id>: <content>" line each, as in memo list but without update dates; run
-memo list when update dates matter. Pass --global to get, edit, or delete a
-memory from <global>.
+<global> block in <memo>. The memory blocks match memo list: newest first, one
+"- <id> (<updated date>): <content>" line per memory. Pass --global to get,
+edit, or delete a memory from <global>.
 If a harness truncates hook output, the instructions tell the agent to read the
 full output file or run memo list before acting on the first request. They also
 tell the agent when to consider saving a memory.
@@ -52,9 +51,5 @@ root when possible.`,
 
 func contextOutput(result memory.ListResult) string {
 	return "<memo>\n<instructions>" + contextInstructions + "</instructions>\n" +
-		memoryBlocks(result, contextMemoryLine) + "</memo>"
-}
-
-func contextMemoryLine(m memory.MemoryDTO) string {
-	return memoryLine(m.ID.String(), m.Content)
+		memoryBlocks(result) + "</memo>"
 }

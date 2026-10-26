@@ -34,10 +34,10 @@ func TestContextOutput(t *testing.T) {
 
 	wantMemories := `</instructions>
 <workspace path="/repo">
-- 550e8400-e29b-41d4-a716-446655440000: workspace fact
+- 550e8400-e29b-41d4-a716-446655440000 (2026-03-01): workspace fact
 </workspace>
 <global>
-- 550e8400-e29b-41d4-a716-446655440001: global fact
+- 550e8400-e29b-41d4-a716-446655440001 (2026-03-01): global fact
 </global>
 </memo>`
 	if !strings.HasSuffix(got, wantMemories) {

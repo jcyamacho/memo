@@ -49,27 +49,23 @@ memories. The command returns the full result set with no pagination.`,
 }
 
 func memoriesOutput(result memory.ListResult) string {
-	return "<memories>\n" + memoryBlocks(result, listedMemoryLine) + "</memories>"
-}
-
-func listedMemoryLine(m memory.MemoryDTO) string {
-	return memoryLine(m.ID.String()+" ("+m.UpdatedAt.UTC().Format(time.DateOnly)+")", m.Content)
+	return "<memories>\n" + memoryBlocks(result) + "</memories>"
 }
 
 // memoryBlocks puts workspace memories before globals so they survive harnesses
 // that keep only the start of long output.
-func memoryBlocks(result memory.ListResult, line func(memory.MemoryDTO) string) string {
+func memoryBlocks(result memory.ListResult) string {
 	return `<workspace path="` + result.Workspace + "\">\n" +
-		memoryLines(result.WorkspaceItems, line) +
+		memoryLines(result.WorkspaceItems) +
 		"</workspace>\n<global>\n" +
-		memoryLines(result.GlobalItems, line) +
+		memoryLines(result.GlobalItems) +
 		"</global>\n"
 }
 
-func memoryLines(items []memory.MemoryDTO, line func(memory.MemoryDTO) string) string {
+func memoryLines(items []memory.MemoryDTO) string {
 	var lines strings.Builder
 	for _, item := range items {
-		lines.WriteString(line(item))
+		lines.WriteString(memoryLine(item))
 		lines.WriteByte('\n')
 	}
 
@@ -77,6 +73,7 @@ func memoryLines(items []memory.MemoryDTO, line func(memory.MemoryDTO) string) s
 }
 
 // memoryLine indents continuation lines so multi-line content stays in one list item.
-func memoryLine(label, content string) string {
-	return "- " + label + ": " + strings.ReplaceAll(content, "\n", "\n  ")
+func memoryLine(m memory.MemoryDTO) string {
+	return "- " + m.ID.String() + " (" + m.UpdatedAt.UTC().Format(time.DateOnly) + "): " +
+		strings.ReplaceAll(m.Content, "\n", "\n  ")
 }

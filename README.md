@@ -219,8 +219,8 @@ UUID version is not part of the domain
 contract; commands normalize valid textual representations.
 
 `memo context` prints `<memo>` with an `<instructions>` block and the same
-`<workspace path="...">` and `<global>` blocks as `memo list`, without update
-dates. It is intended for session-start hooks in coding-agent harnesses.
+`<workspace path="...">` and `<global>` blocks as `memo list`. It is intended for
+session-start hooks in coding-agent harnesses.
 
 `memo delete` prints `<delete_results>` with ordered `<deleted>` and `<failure>`
 children. It still prints the complete XML result when an item fails, then exits
