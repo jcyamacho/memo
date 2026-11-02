@@ -35,14 +35,13 @@ Configure the hook for the agent harness you use:
 ```bash
 memo hook codex
 memo hook claude
+memo hook cursor
 ```
 
 These commands update the global agent config and preserve unrelated hooks. They
-install a session-start hook that runs:
-
-```bash
-memo context
-```
+install a session-start hook that runs `memo context` (Cursor uses
+`memo context --format cursor-hook` so the same XML is wrapped in Cursor's
+`additional_context` JSON field).
 
 `memo context` loads workspace and global memories, then tells the agent to use
 `memo skill` before adding, editing, or deleting memories. If the harness
@@ -53,6 +52,11 @@ or asks it to remember something, or when it confirms a non-obvious project fact
 
 After configuring Codex, open `/hooks` once to review and trust the hook. Codex
 does not run new or changed non-managed hooks until they are trusted.
+
+After configuring Cursor, review the hook in Settings > Hooks. `memo` must be on
+PATH for the Cursor process. Cursor user hooks run from `~/.cursor`; `memo
+context` uses `CURSOR_PROJECT_DIR` when set so workspace memories resolve to the
+open project.
 
 Codex configures `~/.codex/hooks.json` with:
 
@@ -96,6 +100,25 @@ Claude Code configures `~/.claude/settings.json` with:
   }
 }
 ```
+
+Cursor configures `~/.cursor/hooks.json` with:
+
+```json
+{
+  "version": 1,
+  "hooks": {
+    "sessionStart": [
+      {
+        "command": "memo context --format cursor-hook",
+        "timeout": 5
+      }
+    ]
+  }
+}
+```
+
+In some Cursor Agents Window builds, `sessionStart` context can arrive after the
+first turn; the editor Agent panel is the more reliable path today.
 
 Run this once to inspect the same operating guide the agent will use:
 
@@ -141,15 +164,17 @@ project directory.
 
 ## Commands
 
-Most users only need `memo hook codex` or `memo hook claude`. The remaining
-commands are mainly for agents and for manual memory maintenance.
+Most users only need `memo hook codex`, `memo hook claude`, or `memo hook cursor`.
+The remaining commands are mainly for agents and for manual memory maintenance.
 
 | Intent | Command |
 | --- | --- |
 | Configure Codex session-start hook | `memo hook codex` |
 | Configure Claude session-start hook | `memo hook claude` |
+| Configure Cursor session-start hook | `memo hook cursor` |
 | Print the LLM operating guide | `memo skill` |
 | Print session-start context | `memo context` |
+| Print Cursor hook JSON context | `memo context --format cursor-hook` |
 | List current workspace memories and globals | `memo list` |
 | List a specific workspace | `memo list --workspace /path/to/project` |
 | Add a workspace memory | `memo add 'project fact'` |
@@ -220,7 +245,8 @@ contract; commands normalize valid textual representations.
 
 `memo context` prints `<memo>` with an `<instructions>` block and the same
 `<workspace path="...">` and `<global>` blocks as `memo list`. It is intended for
-session-start hooks in coding-agent harnesses.
+session-start hooks in coding-agent harnesses. `--format cursor-hook` wraps that
+XML in `{"additional_context":"..."}` for Cursor's hook protocol.
 
 `memo delete` prints `<delete_results>` with ordered `<deleted>` and `<failure>`
 children. It still prints the complete XML result when an item fails, then exits

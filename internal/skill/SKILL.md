@@ -9,7 +9,6 @@ credentials, tokens, guesses, or temporary progress.
 | Intent | Command |
 | --- | --- |
 | Review memories | `memo list [--workspace <path>]` |
-| Print session-start context | `memo context [--workspace <path>]` |
 | Add workspace memory | `memo add [--workspace <path>] --name <name> <<'EOF'` |
 | Add global memory | `memo add --global --name <name> <<'EOF'` |
 | Read memory | `memo get [--global \| --workspace <path>] <id>` |
@@ -152,8 +151,6 @@ Other outcomes:
   `- <id> (<updated date>): <content>`, with raw content; continuation lines of
   multi-line content are indented by two spaces. The enclosing block states the
   scope.
-- `memo context` prints `<memo>` with an `<instructions>` block and the same two
-  blocks as `memo list`.
 - Memory IDs are opaque strings: either non-null UUIDs or lowercase kebab-case
   names with a random suffix, such as `bun-package-manager-3f9a2c`. Copy them
   exactly from command output. An id is unique only within its scope.

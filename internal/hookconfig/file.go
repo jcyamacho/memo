@@ -9,13 +9,24 @@ import (
 )
 
 func ConfigureFile(path string, spec SessionStartHook) error {
+	return Update(path, func(config *Config) error {
+		if err := config.ConfigureSessionStart(spec); err != nil {
+			return fmt.Errorf("configure session-start hook: %w", err)
+		}
+		return nil
+	})
+}
+
+// Update reads a hook config, applies update, and writes it back.
+// A missing file starts empty. Invalid JSON is returned unread.
+func Update(path string, update func(*Config) error) error {
 	config, err := readFile(path)
 	if err != nil {
 		return fmt.Errorf("read hook config: %w", err)
 	}
 
-	if err := config.ConfigureSessionStart(spec); err != nil {
-		return fmt.Errorf("configure session-start hook: %w", err)
+	if err := update(&config); err != nil {
+		return err
 	}
 
 	if err := writeFile(path, config); err != nil {

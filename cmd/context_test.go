@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/jcyamacho/memo/internal/memory"
+	"github.com/jcyamacho/memo/internal/pkg/testutil"
 )
 
 func TestContextOutput(t *testing.T) {
@@ -42,5 +43,28 @@ func TestContextOutput(t *testing.T) {
 </memo>`
 	if !strings.HasSuffix(got, wantMemories) {
 		t.Fatalf("memories = %s, want suffix %s", got, wantMemories)
+	}
+}
+
+func TestFormatContextOutputCursorHook(t *testing.T) {
+	t.Parallel()
+
+	xml := "<memo>\n<instructions>hi</instructions>\n</memo>"
+	got, err := formatContextOutput(xml, contextFormatCursorHook)
+	if err != nil {
+		t.Fatalf("formatContextOutput: %v", err)
+	}
+
+	payload := testutil.DecodeJSON[struct {
+		AdditionalContext string `json:"additional_context"`
+	}](t, got)
+	testutil.AssertEqual(t, xml, payload.AdditionalContext)
+}
+
+func TestFormatContextOutputRejectsUnknownFormat(t *testing.T) {
+	t.Parallel()
+
+	if _, err := formatContextOutput("<memo/>", "yaml"); err == nil {
+		t.Fatal("expected unsupported format error")
 	}
 }

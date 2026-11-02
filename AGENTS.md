@@ -9,7 +9,8 @@
 - Keep workspace path resolution in `internal/workspace`.
 - Keep CLI presentation and XML formatting in `cmd`.
 - Keep the operator guide that `memo skill` prints in `internal/skill/SKILL.md`.
-- Keep harness-specific hook policy in `internal/codex` and `internal/claude`.
+- Keep harness-specific hook policy in `internal/codex`, `internal/claude`, and
+  `internal/cursor`.
 - Keep hook config editing shared by harnesses in `internal/hookconfig`.
 - Avoid tiny pass-through packages or interfaces unless they remove real coupling.
 

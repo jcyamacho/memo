@@ -81,3 +81,14 @@ func resolveWorkspacePath(workspaceFlag string) (string, error) {
 	}
 	return cwd, nil
 }
+
+// resolveContextWorkspacePath prefers CURSOR_PROJECT_DIR when set so Cursor
+// user hooks, which run from ~/.cursor, still load the open project's memories.
+func resolveContextWorkspacePath(workspaceFlag string) (string, error) {
+	if workspaceFlag == "" {
+		if projectDir := os.Getenv("CURSOR_PROJECT_DIR"); projectDir != "" {
+			workspaceFlag = projectDir
+		}
+	}
+	return resolveWorkspacePath(workspaceFlag)
+}
