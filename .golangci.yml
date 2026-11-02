@@ -8,15 +8,80 @@ linters:
   settings:
     depguard:
       rules:
-        internal-pkg-boundary:
+        memory:
           files:
-            - "**/internal/pkg/**/*.go"
+            - "**/internal/memory/*.go"
+            - "**/internal/memory/**/*.go"
+          list-mode: lax
+          allow:
+            - "github.com/jcyamacho/memo/internal/pkg/testutil$"
+          deny:
+            - pkg: "github.com/jcyamacho/memo/"
+              desc: "memory may only import internal/pkg/testutil from this module"
+        fsstore:
+          files:
+            - "**/internal/fsstore/*.go"
+            - "**/internal/fsstore/**/*.go"
+          list-mode: lax
+          allow:
+            - "github.com/jcyamacho/memo/internal/memory$"
+          deny:
+            - pkg: "github.com/jcyamacho/memo/"
+              desc: "fsstore may only import internal/memory from this module"
+        workspace:
+          files:
+            - "**/internal/workspace/*.go"
+            - "**/internal/workspace/**/*.go"
+          list-mode: lax
+          allow:
+            - "github.com/jcyamacho/memo/internal/pkg/testutil$"
+          deny:
+            - pkg: "github.com/jcyamacho/memo/"
+              desc: "workspace may only import internal/pkg/testutil from this module"
+        hookconfig:
+          files:
+            - "**/internal/hookconfig/*.go"
+            - "**/internal/hookconfig/**/*.go"
+          list-mode: lax
+          allow:
+            - "github.com/jcyamacho/memo/internal/pkg/testutil$"
+          deny:
+            - pkg: "github.com/jcyamacho/memo/"
+              desc: "hookconfig may only import internal/pkg/testutil from this module"
+        harnesses:
+          files:
+            - "**/internal/claude/*.go"
+            - "**/internal/claude/**/*.go"
+            - "**/internal/codex/*.go"
+            - "**/internal/codex/**/*.go"
+            - "**/internal/cursor/*.go"
+            - "**/internal/cursor/**/*.go"
+          list-mode: lax
+          allow:
+            - "github.com/jcyamacho/memo/internal/hookconfig$"
+            - "github.com/jcyamacho/memo/internal/pkg/testutil$"
+          deny:
+            - pkg: "github.com/jcyamacho/memo/"
+              desc: "harness packages may only import internal/hookconfig and internal/pkg/testutil from this module"
+        skill:
+          files:
+            - "**/internal/skill/*.go"
+            - "**/internal/skill/**/*.go"
           list-mode: lax
           deny:
-            - pkg: "github.com/jcyamacho/memo/internal"
-              desc: "internal/pkg may only import stdlib, external modules, or internal/pkg"
+            - pkg: "github.com/jcyamacho/memo/"
+              desc: "skill may not import other packages in this module"
+        internal-pkg:
+          files:
+            - "**/internal/pkg/*.go"
+            - "**/internal/pkg/**/*.go"
+          list-mode: lax
           allow:
-            - "github.com/jcyamacho/memo/internal/pkg"
+            - "github.com/jcyamacho/memo/internal/pkg$"
+            - "github.com/jcyamacho/memo/internal/pkg/"
+          deny:
+            - pkg: "github.com/jcyamacho/memo/"
+              desc: "internal/pkg may only import internal/pkg from this module"
     usetesting:
       context-background: true
       context-todo: true
