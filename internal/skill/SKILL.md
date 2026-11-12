@@ -17,6 +17,10 @@ credentials, tokens, guesses, or temporary progress.
 | List known workspaces | `memo workspaces` |
 | Print store directory | `memo path` |
 
+`memo browse` is an interactive terminal view for people. It lists IDs for the
+current workspace and the global scope, with full content in the detail view.
+Use the commands in the table when working as an agent or script.
+
 Always pass content to `memo add` and `memo edit` through a quoted heredoc: put
 the content on the lines after the command and end it with a line that contains
 only `EOF`. The quotes in `<<'EOF'` make the shell keep every character,

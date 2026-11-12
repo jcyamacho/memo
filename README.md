@@ -164,8 +164,21 @@ project directory.
 
 ## Commands
 
-Most users only need `memo hook codex`, `memo hook claude`, or `memo hook cursor`.
-The remaining commands are mainly for agents and for manual memory maintenance.
+Run `memo browse` in a terminal to search and manage memories for the current
+workspace and the global scope. To open a different project, run
+`memo browse --workspace /path/to/project`.
+
+Results show memory IDs grouped by scope. The detail view shows the scope,
+update date, and full ID above the content.
+
+- Press `/` to search memory IDs and full text as you type.
+- Use the arrow keys to select a memory. Press `Enter` or `Tab` to focus its
+  details and scroll through the full text.
+- Press `e` to edit the selected memory. Set `VISUAL` or `EDITOR` to a terminal
+  editor. Save and exit the editor to apply your changes.
+- Press `d` to see the ID and scope before deleting. Press `y` to confirm or
+  `n` or `Esc` to cancel.
+- Press `q` to quit.
 
 | Intent | Command |
 | --- | --- |
@@ -175,6 +188,7 @@ The remaining commands are mainly for agents and for manual memory maintenance.
 | Print the LLM operating guide | `memo skill` |
 | Print session-start context | `memo context` |
 | Print Cursor hook JSON context | `memo context --format cursor-hook` |
+| Search, read, edit, or delete in the terminal | `memo browse` |
 | List current workspace memories and globals | `memo list` |
 | List a specific workspace | `memo list --workspace /path/to/project` |
 | Add a workspace memory | `memo add 'project fact'` |

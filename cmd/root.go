@@ -21,6 +21,7 @@ Scope:
   delete them.
 
 Output:
+  browse opens an interactive terminal view for reading and managing memories.
   context and list print one line per memory inside <workspace path="..."> and
   <global> blocks. add, get, edit, and delete print XML. Both formats are easy
   for humans to inspect and stable for LLM tools to read.
@@ -49,6 +50,7 @@ Store:
 
 	root.AddCommand(
 		newAddCommand(service),
+		newBrowseCommand(service),
 		newContextCommand(service),
 		newDeleteCommand(service),
 		newEditCommand(service),
