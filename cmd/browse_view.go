@@ -20,8 +20,8 @@ var (
 	browseGlobalLabel    = browseLabel.Foreground(lipgloss.Magenta)
 	browseSelection      = lipgloss.NewStyle().Bold(true).Reverse(true)
 	browseHighlight      = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Yellow)
-	browseDelete         = browseLabel.Foreground(lipgloss.Red)
-	browseDivider        = lipgloss.NewStyle().Faint(true)
+	browseDanger         = browseLabel.Foreground(lipgloss.Red)
+	browseMuted          = lipgloss.NewStyle().Faint(true)
 )
 
 func (m *browseModel) tooSmall() bool {
@@ -38,9 +38,9 @@ func (m *browseModel) listWidth() int {
 
 func (m *browseModel) bodyHeight() int {
 	if m.height < 14 {
-		return m.height - 5
+		return m.height - 4
 	}
-	return m.height - 8
+	return m.height - 7
 }
 
 func (m *browseModel) resize() {
@@ -102,7 +102,7 @@ func (m *browseModel) View() tea.View {
 	if m.search.Focused() && !m.tooSmall() {
 		if cursor := m.search.Cursor(); cursor != nil {
 			cursor.X++
-			cursor.Y = 2
+			cursor.Y = 1
 			view.Cursor = cursor
 		}
 	}
@@ -112,15 +112,15 @@ func (m *browseModel) View() tea.View {
 func (m *browseModel) render() string {
 	width := m.width - 2
 	path := strings.Join(strings.Fields(browseText(m.workspace)), " ")
-	title := browseAccent.Render("memo browse")
-	header := title + "\n" + ansi.Truncate(path, width, "...")
+	const title = "memo browse"
+	header := browseAccent.Render(title) + "  " + browsePathTail(path, width-len(title)-2)
 
 	if m.confirming {
 		item := m.selectedItem()
 		metadata := browseMetadata(item, width)
 		firstLine, _, _ := strings.Cut(strings.TrimSpace(browseText(item.Content)), "\n")
 		excerpt := ansi.Truncate(firstLine, width, "...")
-		confirm := browseDelete.Render("Delete this memory?") + "\n\n" +
+		confirm := browseDanger.Render("Delete this memory?") + "\n\n" +
 			strings.Join(metadata, "\n") + "\n\n" + excerpt + "\n\ny Delete   n / Esc Cancel"
 		if m.height < 14 {
 			return browseInset(confirm)
@@ -128,27 +128,72 @@ func (m *browseModel) render() string {
 		return browseInset(header + "\n\n" + confirm)
 	}
 
-	body := m.renderBody(width)
-	help := "↑↓ Select  Enter Read  / Find\ne Edit  d Delete  q Quit"
-	switch {
-	case m.search.Focused():
-		help = "↑↓ Select  Enter Read  Tab List\nEsc Clear search"
-	case m.reading:
-		help = "↑↓ Scroll  Tab / Esc Results\ne Edit  d Delete  / Find  q Quit"
-	case len(m.matches) == 0:
-		help = "/ Search  Esc Clear search\nq Quit"
+	search := m.search.View()
+	if !m.search.Focused() && m.search.Value() == "" {
+		search = browseMuted.Render("Press / to search")
 	}
 
-	status := ansi.Truncate(strings.Join(strings.Fields(browseText(m.status)), " "), width, "...")
-	if m.height < 14 {
-		if status != "" {
-			firstLine, _, _ := strings.Cut(help, "\n")
-			help = firstLine + "\n" + browseLabel.Render(status)
-		}
-		return browseInset(header + "\n" + m.search.View() + "\n" + body + "\n" + help)
+	body := m.renderBody(width)
+	help := m.help()
+
+	statusStyle := browseLabel
+	if m.status.failed {
+		statusStyle = browseDanger
 	}
-	return browseInset(header + "\n" + m.search.View() + "\n\n" + body + "\n\n" +
-		help + "\n" + browseLabel.Render(status))
+	statusText := ansi.Truncate(strings.Join(strings.Fields(browseText(m.status.text)), " "), width, "...")
+	status := statusStyle.Render(statusText)
+
+	if m.height < 14 {
+		if statusText != "" {
+			help[1] = status
+		}
+		return browseInset(header + "\n" + search + "\n" + body + "\n" + strings.Join(help, "\n"))
+	}
+	return browseInset(header + "\n" + search + "\n\n" + body + "\n\n" +
+		strings.Join(help, "\n") + "\n" + status)
+}
+
+type browseHint struct{ keys, action string }
+
+func (m *browseModel) help() []string {
+	manage := []browseHint{{"e", "Edit"}, {"d", "Delete"}, {"q", "Quit"}}
+	switch {
+	case m.search.Focused() && m.splitView():
+		return browseHelp([]browseHint{{"↑↓", "Select"}, {"Enter", "List"}}, []browseHint{{"Esc", "Clear search"}})
+	case m.search.Focused():
+		return browseHelp(
+			[]browseHint{{"↑↓", "Select"}, {"Enter", "Read"}, {"Tab", "List"}},
+			[]browseHint{{"Esc", "Clear search"}},
+		)
+	case len(m.matches) == 0:
+		return browseHelp([]browseHint{{"/", "Search"}, {"Esc", "Clear search"}}, []browseHint{{"q", "Quit"}})
+	case m.splitView():
+		return browseHelp([]browseHint{{"↑↓", "Select"}, {"PgUp/PgDn", "Scroll"}, {"/", "Search"}}, manage)
+	case m.reading:
+		return browseHelp([]browseHint{{"↑↓", "Scroll"}, {"Esc", "List"}, {"/", "Search"}}, manage)
+	}
+	return browseHelp([]browseHint{{"↑↓", "Select"}, {"Enter", "Read"}, {"/", "Search"}}, manage)
+}
+
+func browseHelp(lines ...[]browseHint) []string {
+	rendered := make([]string, 0, len(lines))
+	for _, hints := range lines {
+		parts := make([]string, 0, len(hints))
+		for _, hint := range hints {
+			parts = append(parts, browseLabel.Render(hint.keys)+" "+browseMuted.Render(hint.action))
+		}
+		rendered = append(rendered, strings.Join(parts, "  "))
+	}
+	return rendered
+}
+
+func browsePathTail(path string, width int) string {
+	const ellipsis = "..."
+	overflow := ansi.StringWidth(path) - width
+	if overflow <= 0 {
+		return path
+	}
+	return ellipsis + ansi.TruncateLeft(path, overflow+len(ellipsis), "")
 }
 
 func (m *browseModel) renderBody(width int) string {
@@ -163,7 +208,7 @@ func (m *browseModel) renderBody(width int) string {
 
 	if m.splitView() {
 		list := m.renderList(m.listWidth(), height)
-		divider := " " + browseDivider.Render("│") + " "
+		divider := " " + browseMuted.Render("│") + " "
 		gutter := strings.TrimSuffix(strings.Repeat(divider+"\n", height), "\n")
 		return lipgloss.JoinHorizontal(lipgloss.Top, list, gutter, m.renderDetail())
 	}
@@ -175,9 +220,18 @@ func (m *browseModel) renderBody(width int) string {
 
 func (m *browseModel) renderList(width, height int) string {
 	header := fmt.Sprintf("RESULTS  %d of %d", m.selected+1, len(m.matches))
-	if !m.reading && !m.search.Focused() {
+	if !m.readerOpen() && !m.search.Focused() {
 		header = browseAccent.Render(header)
 	}
+
+	globalCount := 0
+	for _, index := range m.matches {
+		if m.items[index].IsGlobal() {
+			globalCount++
+		}
+	}
+	scopeCounts := map[string]int{"Global": globalCount, "Workspace": len(m.matches) - globalCount}
+
 	window := m.listWindow()
 	rows := []string{header}
 	lastScope := ""
@@ -188,7 +242,7 @@ func (m *browseModel) renderList(width, height int) string {
 			if lastScope != "" {
 				rows = append(rows, "")
 			}
-			rows = append(rows, browseScopeStyle(item).Render(scope))
+			rows = append(rows, browseScopeStyle(item).Render(fmt.Sprintf("%s (%d)", scope, scopeCounts[scope])))
 			lastScope = scope
 		}
 
@@ -239,12 +293,28 @@ func (m *browseModel) listRows(start, end int) int {
 func (m *browseModel) renderDetail() string {
 	header := m.detailHeader()
 	contentLabel := len(header) - 1
-	if m.reading {
-		header[contentLabel] = browseAccent.Render(header[contentLabel])
-	} else {
-		header[contentLabel] = browseLabel.Render(header[contentLabel])
+	labelStyle := browseLabel
+	if m.readerOpen() {
+		labelStyle = browseAccent
 	}
+	header[contentLabel] = labelStyle.Render(header[contentLabel]) + browseMuted.Render(m.scrollHint())
+
 	return strings.Join(header, "\n") + "\n" + m.detail.View()
+}
+
+// scrollHint is empty when the whole memory fits in the detail pane.
+func (m *browseModel) scrollHint() string {
+	arrows := ""
+	if !m.detail.AtTop() {
+		arrows += "↑"
+	}
+	if !m.detail.AtBottom() {
+		arrows += "↓"
+	}
+	if arrows == "" {
+		return ""
+	}
+	return fmt.Sprintf("  %s %d%%", arrows, int(m.detail.ScrollPercent()*100))
 }
 
 func (m *browseModel) detailHeader() []string {

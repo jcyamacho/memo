@@ -28,7 +28,6 @@ func TestBrowseFiltersFullContentAndConfirmsScopedDelete(t *testing.T) {
 		t.Fatal("content search should show the result ID and its matching text in the detail pane")
 	}
 	model.handleKey(browseTestKey(tea.KeyEnter))
-	testutil.AssertEqual(t, model.reading, true)
 
 	model.handleKey(browseTestKey('d'))
 	view = model.View().Content
@@ -78,7 +77,7 @@ func TestBrowseKeepsScopeAndContentSeparateOnNarrowScreens(t *testing.T) {
 	model.detail.GotoBottom()
 	detail := ansi.Strip(model.View().Content)
 	testutil.AssertEqual(t, strings.Count(detail, "\n")+1, 11)
-	for _, expected := range []string{"GLOBAL MEMORY", "ID  " + strings.Repeat("a", 28), "CONTENT\n Last paragraph."} {
+	for _, expected := range []string{"GLOBAL MEMORY", "ID  " + strings.Repeat("a", 28), "CONTENT  ↑ 100%\n", "\n Last paragraph."} {
 		if !strings.Contains(detail, expected) {
 			t.Fatalf("scrolled detail is missing %q:\n%s", expected, detail)
 		}
@@ -88,6 +87,34 @@ func TestBrowseKeepsScopeAndContentSeparateOnNarrowScreens(t *testing.T) {
 			t.Fatalf("detail line exceeds the terminal width: %q", line)
 		}
 	}
+}
+
+func TestBrowseScrollsDetailBesideTheListOnWideScreens(t *testing.T) {
+	t.Parallel()
+
+	model := newTestBrowseModel(t)
+	content := "First paragraph.\n\n" + strings.Repeat("More text.\n", 30) + "Last paragraph."
+	model.items[0] = mustLoadMemoryDTO(t, testMemoryIDOne, content, "/repo", time.Now())
+	model.filter()
+
+	view := ansi.Strip(model.View().Content)
+	if !strings.Contains(view, "CONTENT  ↓ 0%") || strings.Contains(view, "Last paragraph.") {
+		t.Fatalf("long detail should start at the top and show that more text follows:\n%s", view)
+	}
+
+	model.handleKey(browseTestKey(tea.KeyEnter))
+	for range 5 {
+		model.handleKey(tea.KeyPressMsg{Code: tea.KeyPgDown})
+	}
+	view = ansi.Strip(model.View().Content)
+	if !strings.Contains(view, "Last paragraph.") || !strings.Contains(view, "> "+testMemoryIDOne) {
+		t.Fatalf("page down should scroll the detail and keep the list visible:\n%s", view)
+	}
+
+	model.handleKey(browseTestKey('j'))
+	testutil.AssertEqual(t, model.selectedItem().IsGlobal(), true)
+	model.handleKey(browseTestKey('k'))
+	testutil.AssertEqual(t, model.selectedItem().IsGlobal(), false)
 }
 
 func TestBrowseSavesEditToSelectedScope(t *testing.T) {

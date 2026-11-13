@@ -31,8 +31,12 @@ Use --workspace to open a different project.
 Results show memory IDs grouped by scope. The detail view shows the scope,
 update date, and full ID above the memory text.
 
-Press / to search IDs and full memory text. Use the arrow keys to select
-a memory and Enter or Tab to read its details.
+Press / to search IDs and full memory text. Use the arrow keys or j and k
+to select a memory, and g or G to jump to the first or last one.
+
+In a wide terminal the details stay next to the results. Press PgUp or PgDn,
+or Ctrl+U or Ctrl+D, to scroll them. In a narrow terminal, press Enter or Tab
+to open the details and Esc to return to the results.
 
 Press e to edit in the terminal editor set by VISUAL or EDITOR. Save and
 exit the editor to apply the changes. Press d to review the ID and scope
@@ -83,8 +87,21 @@ type browseModel struct {
 	width, height int
 	reading       bool
 	confirming    bool
-	status        string
+	status        browseStatus
 	editFile      string
+}
+
+type browseStatus struct {
+	text   string
+	failed bool
+}
+
+func browseNotice(text string) browseStatus {
+	return browseStatus{text: text}
+}
+
+func browseFailure(format string, args ...any) browseStatus {
+	return browseStatus{text: fmt.Sprintf(format, args...), failed: true}
 }
 
 func newBrowseModel(ctx context.Context, service *memory.Service, result memory.ListResult) *browseModel {
@@ -155,7 +172,7 @@ func (m *browseModel) handleKey(key tea.KeyPressMsg) tea.Cmd {
 		switch stroke {
 		case "enter":
 			m.search.Blur()
-			m.reading = len(m.matches) > 0
+			m.reading = len(m.matches) > 0 && !m.splitView()
 		case "tab":
 			m.search.Blur()
 		case "esc":
@@ -169,7 +186,7 @@ func (m *browseModel) handleKey(key tea.KeyPressMsg) tea.Cmd {
 		return nil
 	}
 
-	m.status = ""
+	m.status = browseStatus{}
 	switch stroke {
 	case "q":
 		return tea.Quit
@@ -177,13 +194,13 @@ func (m *browseModel) handleKey(key tea.KeyPressMsg) tea.Cmd {
 		m.reading = false
 		return m.search.Focus()
 	case "esc":
-		if m.reading {
+		if m.readerOpen() {
 			m.reading = false
 		} else {
 			m.clearSearch()
 		}
 	case "enter", "tab":
-		if len(m.matches) > 0 {
+		if len(m.matches) > 0 && !m.splitView() {
 			m.reading = !m.reading
 		}
 	case "e":
@@ -193,7 +210,7 @@ func (m *browseModel) handleKey(key tea.KeyPressMsg) tea.Cmd {
 	case "d":
 		m.confirming = len(m.matches) > 0
 	default:
-		if m.reading {
+		if m.readerOpen() || m.splitView() && browseDetailScrollKey(stroke) {
 			var cmd tea.Cmd
 			m.detail, cmd = m.detail.Update(key)
 			return cmd
@@ -202,6 +219,19 @@ func (m *browseModel) handleKey(key tea.KeyPressMsg) tea.Cmd {
 	}
 
 	return nil
+}
+
+// The reader replaces the list only when the terminal is too narrow to show both.
+func (m *browseModel) readerOpen() bool {
+	return m.reading && !m.splitView()
+}
+
+func browseDetailScrollKey(stroke string) bool {
+	switch stroke {
+	case "pgup", "pgdown", "ctrl+u", "ctrl+d":
+		return true
+	}
+	return false
 }
 
 func (m *browseModel) updateSearch(msg tea.Msg) tea.Cmd {
@@ -245,17 +275,17 @@ func (m *browseModel) filter() {
 func (m *browseModel) moveSelection(key string) {
 	next := m.selected
 	switch key {
-	case "up":
+	case "up", "k":
 		next--
-	case "down":
+	case "down", "j":
 		next++
 	case "pgup":
 		next -= m.listWindow().size()
 	case "pgdown":
 		next += m.listWindow().size()
-	case "home":
+	case "home", "g":
 		next = 0
-	case "end":
+	case "end", "G", "shift+g":
 		next = len(m.matches) - 1
 	}
 	next = max(0, min(next, len(m.matches)-1))
@@ -274,13 +304,13 @@ type browseEditorDone struct{ err error }
 func (m *browseModel) openEditor() tea.Cmd {
 	editor := cmp.Or(strings.TrimSpace(os.Getenv("VISUAL")), strings.TrimSpace(os.Getenv("EDITOR")))
 	if editor == "" {
-		m.status = "Set VISUAL or EDITOR to a terminal editor."
+		m.status = browseFailure("Set VISUAL or EDITOR to a terminal editor.")
 		return nil
 	}
 
 	file, err := os.CreateTemp("", "memo-*.md")
 	if err != nil {
-		m.status = fmt.Sprintf("Could not prepare editor: %v", err)
+		m.status = browseFailure("Could not prepare editor: %v", err)
 		return nil
 	}
 	m.editFile = file.Name()
@@ -288,7 +318,7 @@ func (m *browseModel) openEditor() tea.Cmd {
 	_, writeErr := fmt.Fprintln(file, item.Content)
 	if err := errors.Join(writeErr, file.Close()); err != nil {
 		m.removeEditFile()
-		m.status = fmt.Sprintf("Could not prepare editor: %v", err)
+		m.status = browseFailure("Could not prepare editor: %v", err)
 		return nil
 	}
 
@@ -302,13 +332,13 @@ func (m *browseModel) openEditor() tea.Cmd {
 func (m *browseModel) finishEdit(editorErr error) {
 	defer m.removeEditFile()
 	if editorErr != nil {
-		m.status = fmt.Sprintf("Editor exited without saving to memo: %v", editorErr)
+		m.status = browseFailure("Editor exited without saving to memo: %v", editorErr)
 		return
 	}
 
 	data, err := os.ReadFile(m.editFile)
 	if err != nil {
-		m.status = fmt.Sprintf("Could not read edited memory: %v", err)
+		m.status = browseFailure("Could not read edited memory: %v", err)
 		return
 	}
 
@@ -317,10 +347,10 @@ func (m *browseModel) finishEdit(editorErr error) {
 	content := strings.TrimSpace(string(data))
 	switch content {
 	case item.Content:
-		m.status = "No changes."
+		m.status = browseNotice("No changes.")
 		return
 	case "":
-		m.status = "Memory text is empty. No changes saved."
+		m.status = browseFailure("Memory text is empty. No changes saved.")
 		return
 	}
 
@@ -328,13 +358,13 @@ func (m *browseModel) finishEdit(editorErr error) {
 		ID: item.ID, Workspace: item.Workspace, Global: item.IsGlobal(),
 	})
 	if err != nil {
-		m.status = fmt.Sprintf("Could not read memory before saving: %v", err)
+		m.status = browseFailure("Could not read memory before saving: %v", err)
 		return
 	}
 	if current.Content != item.Content {
 		m.items[index] = current
 		m.filter()
-		m.status = "Memory changed outside the browser. Reopen the editor to edit the latest version."
+		m.status = browseFailure("Memory changed outside the browser. Reopen the editor to edit the latest version.")
 		return
 	}
 
@@ -342,13 +372,13 @@ func (m *browseModel) finishEdit(editorErr error) {
 		ID: item.ID, Workspace: item.Workspace, Global: item.IsGlobal(), Content: content,
 	})
 	if err != nil {
-		m.status = fmt.Sprintf("Could not save memory: %v", err)
+		m.status = browseFailure("Could not save memory: %v", err)
 		return
 	}
 
 	m.items[index] = updated
 	m.filter()
-	m.status = "Memory saved."
+	m.status = browseNotice("Memory saved.")
 }
 
 func (m *browseModel) removeEditFile() {
@@ -365,14 +395,14 @@ func (m *browseModel) deleteSelected() {
 		IDs: []memory.ID{item.ID}, Workspace: item.Workspace, Global: item.IsGlobal(),
 	})
 	if err != nil {
-		m.status = fmt.Sprintf("Could not delete memory: %v", err)
+		m.status = browseFailure("Could not delete memory: %v", err)
 		return
 	}
 
 	m.items = slices.Delete(m.items, index, index+1)
 	m.filter()
-	m.status = "Memory deleted."
+	m.status = browseNotice("Memory deleted.")
 	if !outcomes[0].Deleted {
-		m.status = "Memory was already deleted."
+		m.status = browseNotice("Memory was already deleted.")
 	}
 }

@@ -172,8 +172,12 @@ Results show memory IDs grouped by scope. The detail view shows the scope,
 update date, and full ID above the content.
 
 - Press `/` to search memory IDs and full text as you type.
-- Use the arrow keys to select a memory. Press `Enter` or `Tab` to focus its
-  details and scroll through the full text.
+- Use the arrow keys or `j` and `k` to select a memory. Press `g` or `G` to
+  jump to the first or last one.
+- In a wide terminal the details stay next to the results. Press `PgUp` or
+  `PgDn`, or `Ctrl+U` or `Ctrl+D`, to scroll them.
+- In a narrow terminal, press `Enter` or `Tab` to open the details and `Esc` to
+  return to the results.
 - Press `e` to edit the selected memory. Set `VISUAL` or `EDITOR` to a terminal
   editor. Save and exit the editor to apply your changes.
 - Press `d` to see the ID and scope before deleting. Press `y` to confirm or

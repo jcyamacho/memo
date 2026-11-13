@@ -83,8 +83,9 @@ Save a candidate only when every answer is yes:
 5. Is it one independently reusable idea?
 
 When the user explicitly asks you to remember something, save it unless it is a
-secret, credential, or token. If it fails another question above, tell the user
-which one and save it only if they confirm.
+secret, credential, or token. If it fails another question above or is on the
+reject list below, such as a private detail, tell the user why and save it only
+if they confirm.
 
 Good candidates: explicit user corrections, stable preferences, durable
 decisions with reusable reasoning, non-obvious project constraints, confirmed
@@ -155,7 +156,7 @@ Other outcomes:
   `- <id> (<updated date>): <content>`, with raw content; continuation lines of
   multi-line content are indented by two spaces. The enclosing block states the
   scope.
-- Memory IDs are opaque strings: either non-null UUIDs or lowercase kebab-case
+- Memory IDs are opaque strings: either UUIDs or lowercase kebab-case
   names with a random suffix, such as `bun-package-manager-3f9a2c`. Copy them
   exactly from command output. An id is unique only within its scope.
 - `memo add`, `memo get`, and `memo edit` print one XML `<memory>` element with
@@ -177,5 +178,7 @@ Other outcomes:
   another workspace, then retry with the matching `--global` or `--workspace`.
 - `memo edit` fails with `invalid input` when the new content is empty or equal
   to the current content. Equal content means the memory is already correct.
+- `memo add` fails with `invalid input` when `--name` has no ASCII letters or
+  digits. Retry with a name made of ASCII English words.
 - An `internal_error` delete status is a store problem. Report it to the user
   instead of retrying.
